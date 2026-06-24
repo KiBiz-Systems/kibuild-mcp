@@ -74,7 +74,25 @@ Explode the Save-as-XML export at /path/to/Contacts.xml into my project, then bu
 
 ### Step 1 — Get the binary
 
-**Option A — Download a release binary (recommended)**
+**Option A — Quick installation script (recommended)**
+
+Run the install command for your platform:
+
+**macOS / Linux:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/install.sh | sh
+```
+*Installs to `/usr/local/bin/kibuild-mcp`.*
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/install.ps1 | iex
+```
+*Installs to `%LOCALAPPDATA%\Programs\kibuild-mcp\kibuild-mcp.exe` and appends it to your User PATH.*
+
+---
+
+**Option B — Manual download**
 
 Go to the [Releases page](https://github.com/priyabratasahoo21/kibuild-mcp/releases) and download the binary for your platform:
 
@@ -85,43 +103,43 @@ Go to the [Releases page](https://github.com/priyabratasahoo21/kibuild-mcp/relea
 | Linux | `kibuild-mcp-linux-amd64` |
 | Windows | `kibuild-mcp-windows-amd64.exe` |
 
-Then move it to a permanent location on your PATH:
+Move it to a folder on your PATH:
 
-**macOS / Linux:**
-```bash
-chmod +x kibuild-mcp-darwin-arm64
-mv kibuild-mcp-darwin-arm64 /usr/local/bin/kibuild-mcp
-```
-The binary now lives at `/usr/local/bin/kibuild-mcp`. Use this path in your MCP config below.
+- **macOS / Linux:**
+  ```bash
+  chmod +x kibuild-mcp-darwin-arm64
+  mv kibuild-mcp-darwin-arm64 /usr/local/bin/kibuild-mcp
+  ```
+- **Windows (PowerShell):**
+  ```powershell
+  mkdir "$env:LOCALAPPDATA\Programs\kibuild-mcp"
+  Move-Item kibuild-mcp-windows-amd64.exe "$env:LOCALAPPDATA\Programs\kibuild-mcp\kibuild-mcp.exe"
+  [Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";$env:LOCALAPPDATA\Programs\kibuild-mcp", "User")
+  ```
 
 > On macOS, the first time you run it you may need to allow it in **System Settings → Privacy & Security**.
 
-**Windows:**
-```powershell
-# Create a folder for CLI tools if you don't have one
-mkdir "$env:LOCALAPPDATA\Programs\kibuild-mcp"
-Move-Item kibuild-mcp-windows-amd64.exe "$env:LOCALAPPDATA\Programs\kibuild-mcp\kibuild-mcp.exe"
-# Add to PATH (run once, then restart your terminal)
-[Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";$env:LOCALAPPDATA\Programs\kibuild-mcp", "User")
-```
-The binary lives at `%LOCALAPPDATA%\Programs\kibuild-mcp\kibuild-mcp.exe`. Use this full path in your MCP config below.
+---
 
-**Option B — Homebrew (macOS / Linux)**
+**Option C — Go install**
+
+Requires Go 1.21 or later.
 
 ```bash
-brew install kibuild/tap/kibuild-mcp
+go install github.com/priyabratasahoo21/kibuild-mcp@latest
 ```
+*This places `kibuild-mcp` in your `$GOPATH/bin` (typically `~/go/bin`), which should be in your PATH.*
 
-> Homebrew tap coming soon.
+---
 
-**Option C — Build from source**
+**Option D — Build from source**
 
 Requires Go 1.21 or later.
 
 ```bash
 git clone https://github.com/priyabratasahoo21/kibuild-mcp.git
 cd kibuild-mcp
-go build -o kibuild-mcp .
+go build -ldflags="-s -w" -o kibuild-mcp .
 mv kibuild-mcp /usr/local/bin/
 ```
 
