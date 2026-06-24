@@ -149,7 +149,7 @@ mv kibuild-mcp /usr/local/bin/
 
 ### Step 2 — Register in your AI tool
 
-Pick your tool below. Paste the snippet into the config file shown, replacing `<absolute-path-to-your-project-folder>` with the absolute path to your FileMaker project folder.
+Pick your tool below. Paste the snippet into the config file shown, replacing `/path/to/your/project` with the absolute path to your FileMaker project folder.
 
 > **Where is my project folder?** It's the folder that contains (or will contain) your `files/Schema/` export. The same path you would pass to `generate_schema_map`.
 
@@ -165,7 +165,7 @@ Config file: `~/.claude.json`
     "kibuild": {
       "command": "/usr/local/bin/kibuild-mcp",
       "env": {
-        "KIBUILD_ACTIVE_PROJECT": "<absolute-path-to-your-project-folder>"
+        "KIBUILD_ACTIVE_PROJECT": "/path/to/your/project"
       }
     }
   }
@@ -187,7 +187,7 @@ Config file: `~/.codex/config.toml` (global) or `.codex/config.toml` in your rep
 command = "/usr/local/bin/kibuild-mcp"
 
 [mcp_servers.kibuild.env]
-KIBUILD_ACTIVE_PROJECT = "<absolute-path-to-your-project-folder>"
+KIBUILD_ACTIVE_PROJECT = "/path/to/your/project"
 ```
 
 > **Windows path:** use `command = 'C:\Users\<YourName>\AppData\Local\Programs\kibuild-mcp\kibuild-mcp.exe'`
@@ -210,7 +210,7 @@ Config file: `~/.gemini/config/mcp_config.json`
     "kibuild": {
       "command": "/usr/local/bin/kibuild-mcp",
       "env": {
-        "KIBUILD_ACTIVE_PROJECT": "<absolute-path-to-your-project-folder>"
+        "KIBUILD_ACTIVE_PROJECT": "/path/to/your/project"
       }
     }
   }
@@ -233,7 +233,7 @@ Config file: `~/.cursor/mcp.json`
     "kibuild": {
       "command": "/usr/local/bin/kibuild-mcp",
       "env": {
-        "KIBUILD_ACTIVE_PROJECT": "<absolute-path-to-your-project-folder>"
+        "KIBUILD_ACTIVE_PROJECT": "/path/to/your/project"
       }
     }
   }
@@ -252,7 +252,7 @@ Config file: `~/.codeium/windsurf/mcp_config.json`
     "kibuild": {
       "command": "/usr/local/bin/kibuild-mcp",
       "env": {
-        "KIBUILD_ACTIVE_PROJECT": "<absolute-path-to-your-project-folder>"
+        "KIBUILD_ACTIVE_PROJECT": "/path/to/your/project"
       }
     }
   }
@@ -271,7 +271,7 @@ Config file: User `settings.json` (`Ctrl+Shift+P` → "Open User Settings JSON")
     "kibuild": {
       "command": "/usr/local/bin/kibuild-mcp",
       "env": {
-        "KIBUILD_ACTIVE_PROJECT": "<absolute-path-to-your-project-folder>"
+        "KIBUILD_ACTIVE_PROJECT": "/path/to/your/project"
       }
     }
   }
