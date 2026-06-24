@@ -27,7 +27,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Register it in your AI tool's MCP config, then your AI tool will spawn it automatically.")
 		fmt.Fprintln(os.Stderr, "")
 		fmt.Fprintln(os.Stderr, "Example (Claude Code, ~/.claude.json):")
-		fmt.Fprintln(os.Stderr, `  "mcpServers": { "kibuild": { "command": "/usr/local/bin/kibuild-mcp", "env": { "KIBUILD_ACTIVE_PROJECT": "/path/to/project" } } }`)
+		fmt.Fprintln(os.Stderr, `  "mcpServers": { "kibuild": { "command": "/usr/local/bin/kibuild-mcp", "env": { "KIBUILD_ACTIVE_PROJECT": "<absolute-path-to-your-project-folder>" } } }`)
 		fmt.Fprintln(os.Stderr, "")
 		fmt.Fprintln(os.Stderr, "See https://github.com/priyabratasahoo21/kibuild-mcp for setup instructions.")
 		os.Exit(0)
