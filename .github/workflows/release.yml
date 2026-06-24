@@ -11,6 +11,10 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      GOFLAGS: -mod=mod
+      GONOSUMDB: '*'
+      GONOSUMCHECK: '*'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -19,7 +23,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: 'stable'
-          cache: true
+          cache: false
+
+      - name: Verify module
+        run: go mod tidy && go mod verify
 
       - name: Build binaries
         run: |
