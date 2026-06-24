@@ -57,6 +57,38 @@ const sampleCatalog = `<?xml version="1.0" encoding="UTF-8"?>
 					<ObjectList membercount="0"></ObjectList>
 				</Script>
 			</StepsForScripts>
+			<FieldsForTables membercount="1">
+				<FieldCatalog>
+					<BaseTableReference id="130" name="People"></BaseTableReference>
+					<Field id="1" name="Full Name" fieldtype="Normal" datatype="Text"></Field>
+					<Field id="2" name="Age" fieldtype="Normal" datatype="Number"></Field>
+				</FieldCatalog>
+			</FieldsForTables>
+			<LayoutCatalog membercount="2">
+				<Layout id="1" name="Group" isFolder="True"></Layout>
+				<Layout id="2" name="Main" width="800">
+					<TableOccurrenceReference id="5" name="People"></TableOccurrenceReference>
+					<ScriptReference id="1" name="Alpha"></ScriptReference>
+				</Layout>
+			</LayoutCatalog>
+			<RelationshipCatalog membercount="1">
+				<Relationship id="1">
+					<LeftTable><TableOccurrenceReference id="5" name="People"></TableOccurrenceReference></LeftTable>
+					<RightTable><TableOccurrenceReference id="6" name="Orders"></TableOccurrenceReference></RightTable>
+					<JoinPredicateList>
+						<JoinPredicate type="Equal">
+							<LeftField><FieldReference id="9" name="id"></FieldReference></LeftField>
+							<RightField><FieldReference id="10" name="people_id"></FieldReference></RightField>
+						</JoinPredicate>
+					</JoinPredicateList>
+				</Relationship>
+			</RelationshipCatalog>
+			<PrivilegeSetsCatalog membercount="2">
+				<ObjectList membercount="2">
+					<PrivilegeSet id="1" name="[Full Access]"></PrivilegeSet>
+					<PrivilegeSet id="2" name="[Read-Only Access]"></PrivilegeSet>
+				</ObjectList>
+			</PrivilegeSetsCatalog>
 		</AddAction>
 	</Structure>
 </FMSaveAsXML>`
@@ -81,8 +113,8 @@ func readFile(t *testing.T, path string) string {
 
 func checkExploded(t *testing.T, res *Result) {
 	t.Helper()
-	if res.Scripts != 3 {
-		t.Errorf("expected 3 scripts, got %d", res.Scripts)
+	if res.Counts["scripts"] != 3 {
+		t.Errorf("expected 3 scripts, got %d", res.Counts["scripts"])
 	}
 	if len(res.Warnings) != 0 {
 		t.Errorf("expected no warnings, got %v", res.Warnings)
@@ -122,6 +154,43 @@ func checkExploded(t *testing.T, res *Result) {
 	if got := readFile(t, filepath.Join(sanitized, "Alpha.txt")); got != "SANITIZED" {
 		t.Errorf("Alpha.txt = %q, want SANITIZED", got)
 	}
+
+	// Tables: FieldsForTables joined into <BaseTable> with the fields find_table reads.
+	if res.Counts["tables"] != 1 {
+		t.Errorf("tables count = %d, want 1", res.Counts["tables"])
+	}
+	table := readFile(t, filepath.Join(res.Dest, "tables", "People.xml"))
+	for _, want := range []string{"<BaseTable>", `name="People"`, `name="Full Name"`, `name="Age"`} {
+		if !strings.Contains(table, want) {
+			t.Errorf("tables/People.xml missing %q", want)
+		}
+	}
+
+	// Layouts: the real layout is written; the isFolder entry is skipped.
+	if res.Counts["layouts"] != 1 {
+		t.Errorf("layouts count = %d, want 1 (folder skipped)", res.Counts["layouts"])
+	}
+	if _, err := os.Stat(filepath.Join(res.Dest, "layouts", "Group.xml")); err == nil {
+		t.Errorf("isFolder layout 'Group' should have been skipped")
+	}
+	layout := readFile(t, filepath.Join(res.Dest, "layouts", "Main.xml"))
+	if !strings.Contains(layout, `name="People"`) || !strings.Contains(layout, `name="Alpha"`) {
+		t.Errorf("layouts/Main.xml lost its TO/script references")
+	}
+
+	// Relationships: filename synthesized from the joined table occurrences.
+	if res.Counts["relationships"] != 1 {
+		t.Errorf("relationships count = %d, want 1", res.Counts["relationships"])
+	}
+	rel := readFile(t, filepath.Join(res.Dest, "relationships", "People to Orders.xml"))
+	if !strings.Contains(rel, `type="Equal"`) || !strings.Contains(rel, `name="people_id"`) {
+		t.Errorf("relationships/People to Orders.xml lost its join predicate")
+	}
+
+	// ObjectList-wrapped catalog: depth auto-lock must still find the objects.
+	if res.Counts["privilege_sets"] != 2 {
+		t.Errorf("privilege_sets count = %d, want 2 (ObjectList-wrapped)", res.Counts["privilege_sets"])
+	}
 }
 
 func TestExplodeSingleFile(t *testing.T) {
@@ -146,9 +215,13 @@ func TestExplodeSplitCatalogs(t *testing.T) {
 	if err := os.MkdirAll(srcDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	// Split mode routes by the *_ScriptCatalog.xml filename.
-	if err := os.WriteFile(filepath.Join(srcDir, "Contacts_ScriptCatalog.xml"), []byte(sampleCatalog), 0o644); err != nil {
-		t.Fatal(err)
+	// Split mode routes each catalog by its own <DB>_<Catalog>.xml filename.
+	// Each parser extracts only its own catalog, so writing the combined
+	// fixture under every expected filename exercises the routing correctly.
+	for _, catalog := range []string{"ScriptCatalog", "FieldCatalog", "LayoutCatalog", "RelationshipCatalog", "PrivilegeSetsCatalog"} {
+		if err := os.WriteFile(filepath.Join(srcDir, "Contacts_"+catalog+".xml"), []byte(sampleCatalog), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	res, err := Explode(srcDir, "Contacts", filepath.Join(dir, "out"), stubSanitize)
 	if err != nil {

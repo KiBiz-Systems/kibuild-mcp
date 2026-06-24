@@ -63,7 +63,13 @@ The built-in **`explode_xml_export`** tool closes that gap. Point it at either f
 Explode the Save-as-XML export at /path/to/Contacts.xml into my project, then build the schema map.
 ```
 
-> **Coverage:** `explode_xml_export` currently explodes the **scripts** catalog into `scripts/*.xml` + `scripts_sanitized/*.txt` (full script-analysis and reference tools work). Layouts, base tables, and relationships are not exploded yet — for those, use the KiBuild plugin's Export Schema, or a community tool such as *FM-XML-Export-Exploder*, until support lands.
+> **Coverage:** `explode_xml_export` explodes **every catalog** in the export, one file per object under `Schema/<database>/`:
+> - `scripts/*.xml` + `scripts_sanitized/*.txt` — full script analysis and reference tools
+> - `tables/*.xml` — base tables with their fields joined in (find_table, calculation/field references)
+> - `layouts/*.xml`, `relationships/*.xml`, `table_occurrences/*.xml` — navigation, impact analysis, relationship predicates
+> - `valuelists/`, `custom_functions/`, `custom_menus/`, `accounts/`, `privilege_sets/`, `extended_privileges/`, `themes/`, `base_directories/`, `external_data_sources/` — exploded for completeness and Git diffing
+>
+> The indexer reads `tables/`, `layouts/`, `relationships/`, `table_occurrences/`, and `scripts/`; the remaining folders are split out for browsing/version control. Script folders are flattened and name collisions disambiguated by id; relationship files are named after the joined table occurrences.
 
 ---
 
@@ -306,7 +312,7 @@ Any tool name listed there is excluded from `tools/list` and blocked at call tim
 | `validate_fmxmlsnippet` | Run 7-rule structural validation on a generated FMXML snippet and return a pass/fail report with details. |
 | `validate_webviewer_html` | Check generated WebViewer HTML for remote dependencies, risky JavaScript APIs, FileMaker bridge usage, and bundle size. |
 | `write_outbox_artifact` | Save a generated script, layout, or document to the project outbox as a versioned artifact with a manifest entry. |
-| `explode_xml_export` | Explode a FileMaker **Save a Copy as XML** export (single `FMSaveAsXML` file or split-catalog folder — auto-detected) into the per-object schema layout. Writes `scripts/<name>.xml` + `scripts_sanitized/<name>.txt` under `Schema/<database>/`; run `generate_schema_map` afterward. |
+| `explode_xml_export` | Explode a FileMaker **Save a Copy as XML** export (single `FMSaveAsXML` file or split-catalog folder — auto-detected) into the per-object schema layout. Explodes every catalog — scripts (+ sanitized `.txt`), tables (fields joined in), layouts, relationships, table occurrences, value lists, custom functions/menus, accounts, privileges, themes — one file per object under `Schema/<database>/`; run `generate_schema_map` afterward. |
 
 ### Specialist skills
 

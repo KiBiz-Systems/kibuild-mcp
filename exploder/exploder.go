@@ -27,12 +27,13 @@ type Sanitizer func(snippet string) (string, error)
 
 // Result reports what was written.
 type Result struct {
-	Database string   `json:"database"`
-	Dest     string   `json:"dest"`
-	Source   string   `json:"source"`
-	Mode     string   `json:"mode"` // "single-file" or "split-catalogs"
-	Scripts  int      `json:"scripts"`
-	Warnings []string `json:"warnings,omitempty"`
+	Database string         `json:"database"`
+	Dest     string         `json:"dest"`
+	Source   string         `json:"source"`
+	Mode     string         `json:"mode"`   // "single-file" or "split-catalogs"
+	Counts   map[string]int `json:"counts"` // output folder -> objects written
+	Total    int            `json:"total"`
+	Warnings []string       `json:"warnings,omitempty"`
 }
 
 // Explode reads the FileMaker XML export at source and writes the exploded
@@ -49,14 +50,10 @@ func Explode(source, database, dest string, sanitize Sanitizer) (*Result, error)
 		database = inferDatabase(source, isDir)
 	}
 	if dest == "" {
-		if isDir {
-			dest = filepath.Dir(source)
-		} else {
-			dest = filepath.Dir(source)
-		}
+		dest = filepath.Dir(source)
 	}
 
-	res := &Result{Database: database, Source: source}
+	res := &Result{Database: database, Source: source, Counts: map[string]int{}}
 	if isDir {
 		res.Mode = "split-catalogs"
 	} else {
@@ -66,31 +63,87 @@ func Explode(source, database, dest string, sanitize Sanitizer) (*Result, error)
 	schemaRoot := filepath.Join(dest, "Schema", database)
 	res.Dest = schemaRoot
 
-	scriptXML, err := readCatalog(source, isDir, "ScriptCatalog")
-	if err != nil {
-		return nil, err
+	record := func(folder string, n int, err error) {
+		if err != nil {
+			res.Warnings = append(res.Warnings, fmt.Sprintf("%s: %v", folder, err))
+		}
+		if n > 0 {
+			res.Counts[folder] = n
+			res.Total += n
+		}
 	}
-	n, warns, err := explodeScripts(scriptXML, schemaRoot, sanitize)
-	if err != nil {
-		return nil, fmt.Errorf("exploding scripts: %w", err)
+
+	// Scripts: the step list lives in <StepsForScripts>, sanitized to .txt.
+	if xmlStr, ok := loadCatalogXML(source, isDir, "ScriptCatalog"); ok {
+		n, warns, err := explodeScripts(xmlStr, schemaRoot, sanitize)
+		res.Warnings = append(res.Warnings, warns...)
+		record("scripts", n, err)
 	}
-	res.Scripts = n
-	res.Warnings = append(res.Warnings, warns...)
+
+	// Tables: join FieldsForTables/FieldCatalog (carries fields) into <BaseTable>.
+	if xmlStr, ok := loadCatalogXML(source, isDir, "FieldCatalog"); ok {
+		n, err := explodeTables(xmlStr, schemaRoot)
+		record("tables", n, err)
+	}
+
+	// Relationships: filename synthesized from the joined table occurrences.
+	if xmlStr, ok := loadCatalogXML(source, isDir, "RelationshipCatalog"); ok {
+		n, err := explodeRelationships(xmlStr, schemaRoot)
+		record("relationships", n, err)
+	}
+
+	// Remaining catalogs split one object element per file (element as root).
+	for _, c := range genericCatalogs {
+		xmlStr, ok := loadCatalogXML(source, isDir, c.fileKey)
+		if !ok {
+			continue
+		}
+		n, err := explodeGeneric(xmlStr, c.container, c.object, c.folder, schemaRoot)
+		record(c.folder, n, err)
+	}
 
 	return res, nil
 }
 
-// readCatalog returns the XML to parse for the given catalog. A single-file
-// export returns the whole file (the parser finds the catalog element within);
-// a split folder returns the matching <…>_<catalog>.xml.
-func readCatalog(source string, isDir bool, catalog string) (string, error) {
+// genericCatalog maps a FileMaker catalog to a per-object output folder for the
+// straightforward "split each object element into its own file" catalogs.
+type genericCatalog struct {
+	fileKey   string // split-file suffix and single-file catalog element to locate
+	container string // element whose direct children are the objects
+	object    string // the per-object element name
+	folder    string // output folder under Schema/<db>/
+}
+
+var genericCatalogs = []genericCatalog{
+	{"LayoutCatalog", "LayoutCatalog", "Layout", "layouts"},
+	{"TableOccurrenceCatalog", "TableOccurrenceCatalog", "TableOccurrence", "table_occurrences"},
+	{"ValueListCatalog", "ValueListCatalog", "ValueList", "valuelists"},
+	{"CustomFunctionsCatalog", "CustomFunctionsCatalog", "CustomFunction", "custom_functions"},
+	{"CustomMenuCatalog", "CustomMenuCatalog", "CustomMenu", "custom_menus"},
+	{"CustomMenuSetCatalog", "CustomMenuSetCatalog", "CustomMenuSet", "custom_menu_sets"},
+	{"AccountsCatalog", "AccountsCatalog", "Account", "accounts"},
+	{"PrivilegeSetsCatalog", "PrivilegeSetsCatalog", "PrivilegeSet", "privilege_sets"},
+	{"ExtendedPrivilegesCatalog", "ExtendedPrivilegesCatalog", "ExtendedPrivilege", "extended_privileges"},
+	{"ExternalDataSourceCatalog", "ExternalDataSourceCatalog", "ExternalDataSource", "external_data_sources"},
+	{"BaseDirectoryCatalog", "BaseDirectoryCatalog", "BaseDirectory", "base_directories"},
+	{"ThemeCatalog", "ThemeCatalog", "Theme", "themes"},
+}
+
+// loadCatalogXML returns the XML to parse for a catalog and whether it exists.
+// A single-file export always returns the whole file (each parser locates its
+// own catalog element within); a split folder returns the matching
+// <…>_<fileKey>.xml, or ok=false when that catalog file is absent.
+func loadCatalogXML(source string, isDir bool, fileKey string) (string, bool) {
 	if !isDir {
 		data, err := os.ReadFile(source)
-		return string(data), err
+		if err != nil {
+			return "", false
+		}
+		return string(data), true
 	}
 	entries, err := os.ReadDir(source)
 	if err != nil {
-		return "", err
+		return "", false
 	}
 	for _, e := range entries {
 		if e.IsDir() {
@@ -99,12 +152,15 @@ func readCatalog(source string, isDir bool, catalog string) (string, error) {
 		name := e.Name()
 		// FileMaker names split files "<DB>_<Catalog>.xml" (e.g.
 		// Contacts_ScriptCatalog.xml); also accept a bare "<Catalog>.xml".
-		if strings.HasSuffix(name, "_"+catalog+".xml") || name == catalog+".xml" {
+		if strings.HasSuffix(name, "_"+fileKey+".xml") || name == fileKey+".xml" {
 			data, err := os.ReadFile(filepath.Join(source, name))
-			return string(data), err
+			if err != nil {
+				return "", false
+			}
+			return string(data), true
 		}
 	}
-	return "", fmt.Errorf("no %s file found in %s", catalog, source)
+	return "", false
 }
 
 // inferDatabase derives the database name from the source path: the file base

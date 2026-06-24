@@ -791,7 +791,7 @@ func GetToolsSchema() []providers.Tool {
 	allTools = append(allTools,
 		providers.Tool{
 			Name:        "explode_xml_export",
-			Description: "Explode a FileMaker 'Save a Copy as XML' export into the per-object schema layout the navigation and reference tools index. Accepts either a single FMSaveAsXML file (split_catalogs=False) or a folder of split *Catalog.xml files (split_catalogs=True). Writes scripts/<name>.xml and scripts_sanitized/<name>.txt under <dest>/Schema/<database>/. Run generate_schema_map afterward to index the result.",
+			Description: "Explode a FileMaker 'Save a Copy as XML' export into the per-object schema layout the navigation and reference tools index. Accepts either a single FMSaveAsXML file (split_catalogs=False) or a folder of split *Catalog.xml files (split_catalogs=True). Explodes every catalog: scripts (with sanitized .txt), tables (fields joined in), layouts, relationships, table occurrences, value lists, custom functions, custom menus, accounts, privilege sets, themes, and more — one file per object under <dest>/Schema/<database>/. Run generate_schema_map afterward to index the result.",
 			Parameters: json.RawMessage(`{
 				"type": "object",
 				"properties": {
