@@ -70,6 +70,79 @@ Explode the Save-as-XML export at /path/to/Contacts.xml into my project, then bu
 
 ---
 
+## Quickstart — one command does everything
+
+Run this in a terminal. It downloads the binary, then launches the built-in setup wizard that checks for the latest version, asks for your FileMaker project folder, writes the MCP config, and verifies every tool is accessible.
+
+**macOS / Linux:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/install.sh | sh
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/install.ps1 | iex
+```
+
+After it finishes: **restart Claude Code**, then run `/mcp` to confirm `kibuild` appears in the server list.
+
+That's it.
+
+> **No `curl`?** The script falls back to `wget` automatically.
+>
+> **Windows execution policy error?** Run first (one-time): `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+
+### Re-run setup any time
+
+Once the binary is installed, the setup wizard is built into it. Run this in a terminal whenever you want to (re)configure the project path, update to the latest version, or verify your tools:
+
+```bash
+kibuild-mcp --setup
+```
+
+It will:
+1. **Check the installed version** against the latest GitHub release and offer to self-update if you are behind.
+2. **Prompt for your FileMaker project path** (the folder containing `files/Schema/`).
+3. **Write the MCP config** to `~/.claude.json`, safely merging with any existing servers.
+4. **Verify all tools** — it prints the exact count and confirms `explode_xml_export` and `generate_schema_map` are present, so you know immediately if a stale binary is the problem.
+
+```
+$ kibuild-mcp --setup
+...
+[4/4] Verifying tools are accessible...
+      ✓ 32 tools will be exposed to MCP clients.
+        ✓ explode_xml_export
+        ✓ generate_schema_map
+        + 3 more (export_schema, read_layout, get_active_context)
+          appear once the FileMaker plugin connects (~35 total).
+```
+
+### After install — useful commands
+
+| Command | Where | What it does |
+|---|---|---|
+| `kibuild-mcp --setup` | Terminal | Full wizard: version check + self-update, config, tool verification |
+| `kibuild-mcp --version` | Terminal | Print the installed version |
+| `/setup-kibuild` | Claude Code | Same wizard driven by Claude Code, with extra diagnosis |
+| `/mcp` | Claude Code | List connected MCP servers and their tools |
+| `Help me set up KiBuild MCP` | Claude Code | Triggers `/setup-kibuild` (with this repo open) |
+
+### Troubleshooting: seeing only 33 tools (missing `explode_xml_export` and `generate_schema_map`)
+
+This means your binary is **pre-v0.2.0**. These two tools were added in v0.2.0 but were not present in earlier builds. Reinstall:
+
+```bash
+# macOS/Linux
+curl -fsSL https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/install.sh | sh
+
+# Windows
+irm https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/install.ps1 | iex
+```
+
+Then **fully quit and restart Claude Code** (the MCP client caches the old process). Run `kibuild-mcp --version` to confirm you are on v0.2.0 or later.
+
+---
+
 ## Installation
 
 ### Step 1 — Get the binary
@@ -151,10 +224,17 @@ go install github.com/priyabratasahoo21/kibuild-mcp@latest
 ```
 *This places `kibuild-mcp` in your `$GOPATH/bin` (typically `~/go/bin`), which should be in your PATH.*
 
+> **Note:** `go install` reports the version as `dev` (the version string is only injected in release builds). The `--setup` wizard will treat a `dev` build as out-of-date and offer to fetch the latest release binary — accept that to get a version-stamped binary, or build from source with the ldflag below.
+
 > **macOS:** After `go install`, also run:
 > ```bash
 > xattr -d com.apple.quarantine ~/go/bin/kibuild-mcp
 > ```
+
+Then finish setup:
+```bash
+kibuild-mcp --setup
+```
 
 ---
 
@@ -165,7 +245,8 @@ Requires Go 1.21 or later.
 ```bash
 git clone https://github.com/priyabratasahoo21/kibuild-mcp.git
 cd kibuild-mcp
-go build -ldflags="-s -w" -o kibuild-mcp .
+# Stamp the version so --version and --setup report it correctly
+go build -ldflags="-s -w -X main.Version=v0.2.0" -o kibuild-mcp .
 mv kibuild-mcp /usr/local/bin/
 ```
 

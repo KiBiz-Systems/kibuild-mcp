@@ -16,15 +16,33 @@ import (
 	"github.com/priyabratasahoo21/kibuild-mcp/tools"
 )
 
+// Version is set at build time via -ldflags "-X main.Version=v0.2.0"
+var Version = "dev"
+
 var cfgManager *config.Manager
 
 func main() {
+	// Handle CLI flags before anything else.
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "--version", "-version", "version":
+			fmt.Println("kibuild-mcp " + Version)
+			os.Exit(0)
+		case "--setup", "-setup", "setup":
+			os.Exit(runSetup())
+		}
+	}
+
 	// When run directly in a terminal (not spawned by an MCP client), print usage and exit.
 	if fi, err := os.Stdin.Stat(); err == nil && (fi.Mode()&os.ModeCharDevice != 0) {
-		fmt.Fprintln(os.Stderr, "kibuild-mcp — FileMaker MCP server")
+		fmt.Fprintln(os.Stderr, "kibuild-mcp "+Version+" — FileMaker MCP server")
 		fmt.Fprintln(os.Stderr, "")
 		fmt.Fprintln(os.Stderr, "This binary is an MCP server. It is not run directly.")
 		fmt.Fprintln(os.Stderr, "Register it in your AI tool's MCP config, then your AI tool will spawn it automatically.")
+		fmt.Fprintln(os.Stderr, "")
+		fmt.Fprintln(os.Stderr, "Usage:")
+		fmt.Fprintln(os.Stderr, "  kibuild-mcp --setup      Interactive setup: configure MCP + verify tools")
+		fmt.Fprintln(os.Stderr, "  kibuild-mcp --version    Print version")
 		fmt.Fprintln(os.Stderr, "")
 		fmt.Fprintln(os.Stderr, "Example (Claude Code, ~/.claude.json):")
 		fmt.Fprintln(os.Stderr, `  "mcpServers": { "kibuild": { "command": "/usr/local/bin/kibuild-mcp", "env": { "KIBUILD_ACTIVE_PROJECT": "/path/to/project" } } }`)
@@ -105,7 +123,7 @@ func handleMCPRequest(req *mcpRequest) {
 			},
 			"serverInfo": map[string]string{
 				"name":    "kibuild-mcp",
-				"version": "1.0.0",
+				"version": Version,
 			},
 		})
 

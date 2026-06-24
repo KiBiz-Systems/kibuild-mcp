@@ -41,7 +41,8 @@ DOWNLOAD_URL="https://github.com/priyabratasahoo21/kibuild-mcp/releases/latest/d
 INSTALL_DIR="/usr/local/bin"
 TMP_FILE="${TMPDIR:-/tmp}/kibuild-mcp-download"
 
-# Download — prefer curl, fall back to wget
+# ── Step 1: Binary ──────────────────────────────────────────────────────────
+
 echo "Downloading ${BINARY_NAME}..."
 if command -v curl >/dev/null 2>&1; then
   curl -fsSL "$DOWNLOAD_URL" -o "$TMP_FILE"
@@ -54,13 +55,11 @@ fi
 
 chmod +x "$TMP_FILE"
 
-# Ensure /usr/local/bin exists
 if [ ! -d "$INSTALL_DIR" ]; then
   echo "Creating ${INSTALL_DIR}..."
   sudo mkdir -p "$INSTALL_DIR"
 fi
 
-# Move to install dir (sudo if needed)
 echo "Installing to ${INSTALL_DIR}/kibuild-mcp..."
 if [ -w "$INSTALL_DIR" ]; then
   mv "$TMP_FILE" "${INSTALL_DIR}/kibuild-mcp"
@@ -69,14 +68,44 @@ else
   sudo mv "$TMP_FILE" "${INSTALL_DIR}/kibuild-mcp"
 fi
 
-# macOS: remove Gatekeeper quarantine so MCP clients can spawn the binary
 if [ "$OS" = "darwin" ]; then
   xattr -d com.apple.quarantine "${INSTALL_DIR}/kibuild-mcp" 2>/dev/null || true
-  echo "macOS: Gatekeeper quarantine removed."
 fi
 
+echo "✓ kibuild-mcp installed  ($(${INSTALL_DIR}/kibuild-mcp --version 2>/dev/null || echo 'version unknown'))"
+
+# ── Step 2: Claude Code slash command ───────────────────────────────────────
+
+COMMAND_URL="https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/.claude/commands/setup-kibuild.md"
+COMMAND_DIR="${HOME}/.claude/commands"
+COMMAND_FILE="${COMMAND_DIR}/setup-kibuild.md"
+
+mkdir -p "$COMMAND_DIR" 2>/dev/null || true
+if command -v curl >/dev/null 2>&1; then
+  curl -fsSL "$COMMAND_URL" -o "$COMMAND_FILE" 2>/dev/null && echo "✓ /setup-kibuild command installed" || true
+elif command -v wget >/dev/null 2>&1; then
+  wget -qO "$COMMAND_FILE" "$COMMAND_URL" 2>/dev/null && echo "✓ /setup-kibuild command installed" || true
+fi
+
+# ── Step 3: Hand off to the native interactive setup ────────────────────────
+# The binary writes the MCP config and verifies tools itself (one code path,
+# identical on every OS). It needs a real terminal for the prompts — when this
+# script is run via `curl | sh`, stdin is the pipe, so we redirect from /dev/tty.
+
+BINARY_PATH="${INSTALL_DIR}/kibuild-mcp"
+
 echo ""
-echo "✓ kibuild-mcp installed to ${INSTALL_DIR}/kibuild-mcp"
-echo ""
-echo "Next: register it in your AI tool's MCP config."
-echo "See https://github.com/priyabratasahoo21/kibuild-mcp#setup for instructions."
+if [ -e /dev/tty ]; then
+  "$BINARY_PATH" --setup < /dev/tty || true
+else
+  echo "────────────────────────────────────────────────────────────────────────"
+  echo ""
+  echo "  Binary installed. Finish setup by running this in your terminal:"
+  echo ""
+  echo "    kibuild-mcp --setup"
+  echo ""
+  echo "  Or, in Claude Code, run:  /setup-kibuild"
+  echo ""
+  echo "  Docs: https://github.com/priyabratasahoo21/kibuild-mcp"
+  echo ""
+fi
