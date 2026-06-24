@@ -1,78 +1,14 @@
 # KiBuild MCP
 
-A self-contained MCP server that gives any AI coding tool deep, read-level access to a Claris FileMaker schema — no FileMaker license required at runtime for schema analysis.
+A self-contained MCP server that gives any AI coding tool deep, read-level access to a Claris FileMaker schema — no FileMaker license required at runtime.
 
-Register one binary in your MCP config. Your AI tool (Claude Code, Cursor, Windsurf, VS Code) immediately gains FileMaker-aware tools: script navigation, impact analysis across the full dependency graph, XML generation and validation, and specialist skills.
-
----
-
-## What it does
-
-### Schema navigation
-Find any script, layout, or table by name with fuzzy matching. Returns the sanitized step list, sibling scripts, and the raw XML path — everything the AI needs to reason about the schema without reading raw XML itself.
-
-### Full dependency graph (16 reference tools)
-Trace anything to anything: which layouts trigger a script, which scripts navigate to a layout, where a field is used in calculations or join predicates, which value lists appear in layout controls. Every reference tool walks the exploded schema XML and returns structured JSON with file paths and line-level snippets.
-
-### XML analysis and generation
-Extract and list script steps from XML, validate generated FMXML snippets against 7 structural rules before they reach FileMaker, validate WebViewer HTML for remote dependencies and risky APIs, and write versioned artifacts to the project outbox for review.
-
-### Specialist skills
-Load curated FileMaker skill prompts (`pro_scriptwriter`, `script_analysis`, `fm_xml_serializer`, `script_debug`) directly into AI context to inject domain-specific guidance for writing, analyzing, or debugging scripts.
+Register one binary. Your AI tool (Claude Code, Cursor, Windsurf, Codex, Antigravity) gains FileMaker-aware tools: script navigation, full dependency graph, XML validation, and specialist skills.
 
 ---
 
-## Prerequisites
+## Get started in 60 seconds
 
-- **Exported FileMaker schema** — Use the KiBuild plugin's `Export Schema` button, or FileMaker's built-in DDR export tool, to produce an exploded schema folder:
-  ```
-  your-project/
-  └── files/
-      └── Schema/
-          └── YourDatabase/
-              ├── scripts/
-              ├── scripts_sanitized/
-              ├── layouts/
-              ├── tables/
-              └── relationships/
-  ```
-- **macOS, Linux, or Windows** — Pre-compiled binaries are provided for all three.
-- **No Go toolchain required** unless you are building from source.
-
-### Where the schema XML can come from
-
-The server indexes an **exploded** schema folder — one XML file *per object*, grouped into `scripts/`, `layouts/`, `tables/`, and `relationships/` (shown above). Several things can produce FileMaker XML; they differ in how much "exploding" is left to do:
-
-| Source | Output | Ready to index? |
-|---|---|---|
-| KiBuild plugin **Export Schema** | Exploded tree, one file per object | ✅ Directly |
-| Built-in **DDR** export | One `FMPReport` document for the whole solution | Not yet supported |
-| **Save a Copy as XML** — single file | One `FMSaveAsXML` document for the whole solution | ✅ Via `explode_xml_export` |
-| **Save a Copy as XML** — per-catalog option | One file per *catalog* (`<DB>_ScriptCatalog.xml`, `<DB>_LayoutCatalog.xml`, `<DB>_BaseTableCatalog.xml`, …) | ✅ Via `explode_xml_export` |
-
-FileMaker 2025/2026's native **Save a Copy as XML** (available as both a menu command and a script step, configured via JSON options) is a convenient, license-friendly way to get schema XML out without the plugin. It emits the `FMSaveAsXML` dialect either as one document, or — with the `per catalog` option — as one `<DB>_<Catalog>Catalog.xml` file per catalog in a destination folder.
-
-The catch: **per-catalog is not per-object.** Even with the split enabled, *all* scripts stay combined inside a single `ScriptCatalog`, all layouts inside `LayoutCatalog`, and so on — FileMaker does not explode each script into its own file, while the indexing tools here expect one file per object.
-
-The built-in **`explode_xml_export`** tool closes that gap. Point it at either form (the single `FMSaveAsXML` file or the split-catalog folder — it auto-detects) and it writes the per-object layout the indexer needs, then run `generate_schema_map`:
-
-```
-Explode the Save-as-XML export at /path/to/Contacts.xml into my project, then build the schema map.
-```
-
-> **Coverage:** `explode_xml_export` explodes **every catalog** in the export, one file per object under `Schema/<database>/`:
-> - `scripts/*.xml` + `scripts_sanitized/*.txt` — full script analysis and reference tools
-> - `tables/*.xml` — base tables with their fields joined in (find_table, calculation/field references)
-> - `layouts/*.xml`, `relationships/*.xml`, `table_occurrences/*.xml` — navigation, impact analysis, relationship predicates
-> - `valuelists/`, `custom_functions/`, `custom_menus/`, `accounts/`, `privilege_sets/`, `extended_privileges/`, `themes/`, `base_directories/`, `external_data_sources/` — exploded for completeness and Git diffing
->
-> The indexer reads `tables/`, `layouts/`, `relationships/`, `table_occurrences/`, and `scripts/`; the remaining folders are split out for browsing/version control. Script folders are flattened and name collisions disambiguated by id; relationship files are named after the joined table occurrences.
-
----
-
-## Quickstart — one command does everything
-
-Run this in a terminal. It downloads the binary, then launches the built-in setup wizard that checks for the latest version, asks for your FileMaker project folder, writes the MCP config, and verifies every tool is accessible.
+Run the installer for your platform. It downloads the binary and launches a setup wizard that configures everything automatically.
 
 **macOS / Linux:**
 ```bash
@@ -84,187 +20,74 @@ curl -fsSL https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/
 irm https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/install.ps1 | iex
 ```
 
-After it finishes: **restart Claude Code**, then run `/mcp` to confirm `kibuild` appears in the server list.
+The wizard will:
+1. Check for the latest version and self-update if needed
+2. Ask for your FileMaker project folder
+3. Write the MCP config for your AI tool
+4. Verify all tools are accessible and print the tool count
 
-That's it.
+Then **restart your AI tool**. That's it.
 
 > **No `curl`?** The script falls back to `wget` automatically.
 >
-> **Windows execution policy error?** Run first (one-time): `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
-
-### Re-run setup any time
-
-Once the binary is installed, the setup wizard is built into it. Run this in a terminal whenever you want to (re)configure the project path, update to the latest version, or verify your tools:
-
-```bash
-kibuild-mcp --setup
-```
-
-It will:
-1. **Check the installed version** against the latest GitHub release and offer to self-update if you are behind.
-2. **Prompt for your FileMaker project path** (the folder containing `files/Schema/`).
-3. **Write the MCP config** to `~/.claude.json`, safely merging with any existing servers.
-4. **Verify all tools** — it prints the exact count and confirms `explode_xml_export` and `generate_schema_map` are present, so you know immediately if a stale binary is the problem.
-
-```
-$ kibuild-mcp --setup
-...
-[4/4] Verifying tools are accessible...
-      ✓ 32 tools will be exposed to MCP clients.
-        ✓ explode_xml_export
-        ✓ generate_schema_map
-        + 3 more (export_schema, read_layout, get_active_context)
-          appear once the FileMaker plugin connects (~35 total).
-```
-
-### After install — useful commands
-
-| Command | Where | What it does |
-|---|---|---|
-| `kibuild-mcp --setup` | Terminal | Full wizard: version check + self-update, config, tool verification |
-| `kibuild-mcp --version` | Terminal | Print the installed version |
-| `/setup-kibuild` | Claude Code | Same wizard driven by Claude Code, with extra diagnosis |
-| `/mcp` | Claude Code | List connected MCP servers and their tools |
-| `Help me set up KiBuild MCP` | Claude Code | Triggers `/setup-kibuild` (with this repo open) |
-
-### Troubleshooting: seeing only 33 tools (missing `explode_xml_export` and `generate_schema_map`)
-
-This means your binary is **pre-v0.2.0**. These two tools were added in v0.2.0 but were not present in earlier builds. Reinstall:
-
-```bash
-# macOS/Linux
-curl -fsSL https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/install.sh | sh
-
-# Windows
-irm https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/install.ps1 | iex
-```
-
-Then **fully quit and restart Claude Code** (the MCP client caches the old process). Run `kibuild-mcp --version` to confirm you are on v0.2.0 or later.
-
----
-
-## Installation
-
-### Step 1 — Get the binary
-
-**Option A — Quick installation script (recommended)**
-
-Run the install command for your platform:
-
-**macOS / Linux:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/install.sh | sh
-```
-*Installs to `/usr/local/bin/kibuild-mcp`. The script auto-detects your OS and architecture, and removes the macOS Gatekeeper quarantine flag automatically.*
-
-> **No `curl`?** The script falls back to `wget` automatically.
-
-> **macOS — if the binary is still blocked** after install, run:
-> ```bash
-> xattr -d com.apple.quarantine /usr/local/bin/kibuild-mcp
-> ```
-> Then allow it once in **System Settings → Privacy & Security** if prompted.
-
-**Windows (PowerShell):**
-```powershell
-irm https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/install.ps1 | iex
-```
-*Installs to `%LOCALAPPDATA%\Programs\kibuild-mcp\kibuild-mcp.exe` and appends it to your User PATH.*
-
-> **PowerShell execution policy:** If you get a "running scripts is disabled" error, run this first (one-time, per user):
+> **Windows execution policy error?** Run this once first:
 > ```powershell
 > Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 > ```
 
 ---
 
-**Option B — Manual download**
+### One phrase, zero commands
 
-Go to the [Releases page](https://github.com/priyabratasahoo21/kibuild-mcp/releases) and download the binary for your platform:
+**Claude Code** — open Claude Code with this repo's folder and type:
 
-| Platform | File |
-|---|---|
-| macOS (Apple Silicon) | `kibuild-mcp-darwin-arm64` |
-| macOS (Intel) | `kibuild-mcp-darwin-amd64` |
-| Linux (x86_64) | `kibuild-mcp-linux-amd64` |
-| Linux (ARM64) | `kibuild-mcp-linux-arm64` |
-| Windows | `kibuild-mcp-windows-amd64.exe` |
-
-Move it to a folder on your PATH:
-
-- **macOS / Linux:**
-  ```bash
-  # Replace with your actual downloaded filename
-  chmod +x kibuild-mcp-*
-  sudo mv kibuild-mcp-* /usr/local/bin/kibuild-mcp
-  ```
-  > **macOS Gatekeeper:** After moving, remove the quarantine flag so MCP clients can spawn the binary:
-  > ```bash
-  > xattr -d com.apple.quarantine /usr/local/bin/kibuild-mcp
-  > ```
-  > If you still see a security prompt, allow it in **System Settings → Privacy & Security**.
-- **Windows (PowerShell):**
-  ```powershell
-  mkdir "$env:LOCALAPPDATA\Programs\kibuild-mcp"
-  Move-Item kibuild-mcp-windows-amd64.exe "$env:LOCALAPPDATA\Programs\kibuild-mcp\kibuild-mcp.exe"
-  [Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";$env:LOCALAPPDATA\Programs\kibuild-mcp", "User")
-  ```
-
-> **On macOS, the first time you run it** you may need to allow it in **System Settings → Privacy & Security**.
-> To avoid the prompt entirely, run: `xattr -d com.apple.quarantine /usr/local/bin/kibuild-mcp`
-
----
-
-**Option C — Go install**
-
-Requires Go 1.21 or later.
-
-```bash
-go install github.com/priyabratasahoo21/kibuild-mcp@latest
 ```
-*This places `kibuild-mcp` in your `$GOPATH/bin` (typically `~/go/bin`), which should be in your PATH.*
-
-> **Note:** `go install` reports the version as `dev` (the version string is only injected in release builds). The `--setup` wizard will treat a `dev` build as out-of-date and offer to fetch the latest release binary — accept that to get a version-stamped binary, or build from source with the ldflag below.
-
-> **macOS:** After `go install`, also run:
-> ```bash
-> xattr -d com.apple.quarantine ~/go/bin/kibuild-mcp
-> ```
-
-Then finish setup:
-```bash
-kibuild-mcp --setup
+Help me set up KiBuild MCP
 ```
 
----
+Claude reads the project guide and runs the full wizard automatically. No terminal needed.
 
-**Option D — Build from source**
+**Any other AI tool** — paste this into the chat:
 
-Requires Go 1.21 or later.
-
-```bash
-git clone https://github.com/priyabratasahoo21/kibuild-mcp.git
-cd kibuild-mcp
-# Stamp the version so --version and --setup report it correctly
-go build -ldflags="-s -w -X main.Version=v0.2.0" -o kibuild-mcp .
-mv kibuild-mcp /usr/local/bin/
+```
+Set up KiBuild MCP from: https://github.com/priyabratasahoo21/kibuild-mcp
 ```
 
----
-
-## Setup
-
-### Step 2 — Register in your AI tool
-
-Pick your tool below. Paste the snippet into the config file shown, replacing `/path/to/your/project` with the absolute path to your FileMaker project folder.
-
-> **Where is my project folder?** It's the folder that contains (or will contain) your `files/Schema/` export. The same path you would pass to `generate_schema_map`.
+The AI reads the README, walks you through the installer, and configures the MCP entry for your tool.
 
 ---
 
-#### Claude Code
+## What it does
 
-**macOS / Linux** — Config file: `~/.claude.json`
+### Schema navigation
+
+Find any script, layout, or table by name with fuzzy matching. Returns the sanitized step list, sibling scripts, and the raw XML path — everything the AI needs to reason about the schema without parsing XML itself.
+
+### Full dependency graph
+
+Trace anything to anything: which layouts trigger a script, which scripts navigate to a layout, where a field is used in calculations or join predicates, which value lists appear in layout controls. 16 reference tools walk the exploded schema XML and return structured JSON with file paths and line-level snippets.
+
+### XML analysis and generation
+
+Extract and list script steps from XML, validate generated FMXML snippets against 7 structural rules before they reach FileMaker, validate WebViewer HTML for remote dependencies and risky APIs, and write versioned artifacts to the project outbox for review.
+
+### Specialist skills
+
+Load curated FileMaker skill prompts (`pro_scriptwriter`, `script_analysis`, `fm_xml_serializer`, `script_debug`) directly into AI context to inject domain-specific guidance for writing, analyzing, or debugging scripts.
+
+---
+
+## Configure for your AI tool
+
+After the binary is installed, add the MCP server entry to your tool's config file. Replace `/path/to/your/project` with the absolute path to your FileMaker project folder (the folder that contains `files/Schema/`).
+
+> **Tip:** The `kibuild-mcp --setup` wizard does this for you automatically for Claude Code. For other tools, use the snippets below.
+
+---
+
+### Claude Code
+
+**macOS / Linux** — `~/.claude.json`
 
 ```json
 {
@@ -279,9 +102,7 @@ Pick your tool below. Paste the snippet into the config file shown, replacing `/
 }
 ```
 
-**Windows** — Config file: `C:\Users\<YourName>\.claude.json`
-
-Open it in any text editor (create it if it doesn't exist) and use forward slashes or escaped backslashes for the path:
+**Windows** — `C:\Users\<YourName>\.claude.json`
 
 ```json
 {
@@ -296,58 +117,11 @@ Open it in any text editor (create it if it doesn't exist) and use forward slash
 }
 ```
 
-> **Windows tip:** Forward slashes (`/`) work in JSON on Windows. Double-backslashes (`C:\\Users\\...`) also work, but forward slashes are easier to read and less error-prone.
-
-After editing, restart Claude Code (or run `/mcp` to reload servers).
+After editing, restart Claude Code or run `/mcp` to reload.
 
 ---
 
-#### OpenAI Codex CLI
-
-Config file: `~/.codex/config.toml` (global) or `.codex/config.toml` in your repo (project-scoped)
-
-```toml
-[mcp_servers.kibuild]
-command = "/usr/local/bin/kibuild-mcp"
-
-[mcp_servers.kibuild.env]
-KIBUILD_ACTIVE_PROJECT = "/path/to/your/project"
-```
-
-> **Windows path:** use `command = 'C:\Users\<YourName>\AppData\Local\Programs\kibuild-mcp\kibuild-mcp.exe'`
-
-Or add it via the CLI:
-```bash
-codex mcp add kibuild -- /usr/local/bin/kibuild-mcp
-```
-Then open `~/.codex/config.toml` and add the `KIBUILD_ACTIVE_PROJECT` env var manually.
-
----
-
-#### Google Antigravity (Agy)
-
-Config file: `~/.gemini/config/mcp_config.json`
-
-```json
-{
-  "mcpServers": {
-    "kibuild": {
-      "command": "/usr/local/bin/kibuild-mcp",
-      "env": {
-        "KIBUILD_ACTIVE_PROJECT": "/path/to/your/project"
-      }
-    }
-  }
-}
-```
-
-Create the folder if it doesn't exist: `mkdir -p ~/.gemini/config`
-
-This config is shared across Agy CLI, Antigravity IDE, and all other Antigravity tools.
-
----
-
-#### Cursor
+### Cursor
 
 Config file: `~/.cursor/mcp.json`
 
@@ -366,7 +140,7 @@ Config file: `~/.cursor/mcp.json`
 
 ---
 
-#### Windsurf
+### Windsurf
 
 Config file: `~/.codeium/windsurf/mcp_config.json`
 
@@ -385,9 +159,50 @@ Config file: `~/.codeium/windsurf/mcp_config.json`
 
 ---
 
-#### VS Code (with MCP extension)
+### OpenAI Codex CLI
 
-Config file: User `settings.json` (`Ctrl+Shift+P` → "Open User Settings JSON")
+Config file: `~/.codex/config.toml` (global) or `.codex/config.toml` (project-scoped)
+
+```toml
+[mcp_servers.kibuild]
+command = "/usr/local/bin/kibuild-mcp"
+
+[mcp_servers.kibuild.env]
+KIBUILD_ACTIVE_PROJECT = "/path/to/your/project"
+```
+
+Or add via CLI:
+```bash
+codex mcp add kibuild -- /usr/local/bin/kibuild-mcp
+```
+Then open the config and add `KIBUILD_ACTIVE_PROJECT` to the env block manually.
+
+---
+
+### Google Antigravity (Agy)
+
+Config file: `~/.gemini/config/mcp_config.json`
+
+```json
+{
+  "mcpServers": {
+    "kibuild": {
+      "command": "/usr/local/bin/kibuild-mcp",
+      "env": {
+        "KIBUILD_ACTIVE_PROJECT": "/path/to/your/project"
+      }
+    }
+  }
+}
+```
+
+Create the folder if needed: `mkdir -p ~/.gemini/config`
+
+---
+
+### VS Code (with MCP extension)
+
+User `settings.json` — open via `Ctrl+Shift+P` → "Open User Settings JSON"
 
 ```json
 {
@@ -404,29 +219,60 @@ Config file: User `settings.json` (`Ctrl+Shift+P` → "Open User Settings JSON")
 
 ---
 
-### Step 3 — Build the workspace index
+## Get your FileMaker schema
 
-Once the server is registered, ask your AI tool:
+The server indexes an **exploded** schema folder — one XML file per object, grouped into `scripts/`, `layouts/`, `tables/`, and `relationships/`:
 
-**macOS / Linux:**
 ```
-Call generate_schema_map for my project at /Users/yourname/Documents/MyFileMakerProject
+your-project/
+└── files/
+    └── Schema/
+        └── YourDatabase/
+            ├── scripts/
+            ├── scripts_sanitized/
+            ├── layouts/
+            ├── tables/
+            └── relationships/
 ```
 
-**Windows:**
+### Schema sources
+
+| Source | Output | Ready to index? |
+|---|---|---|
+| KiBuild plugin **Export Schema** | Exploded tree, one file per object | ✅ Directly |
+| **Save a Copy as XML** — single file | One `FMSaveAsXML` document | ✅ Via `explode_xml_export` |
+| **Save a Copy as XML** — per-catalog option | One file per catalog | ✅ Via `explode_xml_export` |
+| Built-in **DDR** export | One `FMPReport` document | Not yet supported |
+
+### Using `explode_xml_export`
+
+If you exported using FileMaker's **Save a Copy as XML** (either as a single file or with the per-catalog split), use the built-in `explode_xml_export` tool to convert it into the per-object layout. Ask your AI tool:
+
 ```
-Call generate_schema_map for my project at C:/Users/YourName/Documents/MyFileMakerProject
+Explode the Save-as-XML export at /path/to/Contacts.xml into my project, then build the schema map.
 ```
 
-> Use the same path you set in `KIBUILD_ACTIVE_PROJECT`. Forward slashes work on all platforms.
+It auto-detects the format and writes one file per object under `Schema/<database>/`, then you run `generate_schema_map` to index it.
 
-This scans your schema folder and writes `workspace_map.md` to your project root. After that, all navigation and reference tools are live. The index auto-refreshes whenever schema files change.
+> **What gets exploded:** scripts (+ sanitized `.txt`), tables (fields joined in), layouts, relationships, table occurrences, value lists, custom functions, custom menus, accounts, privilege sets, extended privileges, themes, and more — one file per object, ready for Git diffing.
 
 ---
 
-## Quick start
+## Build the workspace index
 
-Once registered, ask your AI tool natural questions:
+Once the server is configured, ask your AI tool to index your schema:
+
+```
+Call generate_schema_map for my project at /path/to/your/project
+```
+
+This writes `workspace_map.md` to your project root. After that, all navigation and reference tools are live.
+
+---
+
+## Usage examples
+
+Once set up, ask your AI tool natural questions:
 
 ```
 Find the script "Create Invoice" and show me what it does.
@@ -449,18 +295,40 @@ Validate this FMXML snippet before I import it.
 
 ---
 
+## Reference
+
+### Useful commands
+
+| Command | Where | What it does |
+|---|---|---|
+| `kibuild-mcp --setup` | Terminal | Full wizard: version check, config, tool verification |
+| `kibuild-mcp --version` | Terminal | Print the installed version |
+| `/setup-kibuild` | Claude Code | Same wizard driven by Claude Code, with extra diagnosis |
+| `/mcp` | Claude Code | List connected MCP servers and their tools |
+
+### Tool count
+
+| State | Expected tools |
+|---|---|
+| No plugin connected | ~32 |
+| Plugin connected | ~35 |
+
+If you see fewer than 30 tools, the binary is likely outdated — run `kibuild-mcp --setup` or reinstall.
+
+---
+
 ## Tool reference
 
 ### Schema navigation
 
 | Tool | Description |
 |---|---|
-| `find_script` | Find a script by name. Returns sanitized step list, `txt_path`, `xml_path`, and sibling scripts in the same folder. Always call this before reading or modifying a script. |
-| `find_layout` | Find a layout by name. Returns bound table occurrence, referenced scripts and layouts, and the layout XML path. |
-| `find_table` | Find a base table by name. Returns all fields with types and the table XML path. |
+| `find_script` | Find a script by name. Returns sanitized step list, `txt_path`, `xml_path`, and sibling scripts. |
+| `find_layout` | Find a layout by name. Returns bound table occurrence, referenced scripts and layouts, and the XML path. |
+| `find_table` | Find a base table by name. Returns all fields with types and the XML path. |
 | `inspect_relationships` | Return all relationship predicates for a database or table occurrence. |
-| `search_index` | Keyword search over `workspace_map.md`. Returns only matching lines — token-efficient. Call `generate_schema_map` first if the index does not exist. |
-| `generate_schema_map` | Build or refresh `workspace_map.md` — a compact Markdown index of all tables, layouts, scripts, and table occurrences across the workspace. |
+| `search_index` | Keyword search over `workspace_map.md`. Token-efficient — returns only matching lines. |
+| `generate_schema_map` | Build or refresh `workspace_map.md` — a compact index of all tables, layouts, scripts, and table occurrences. |
 
 ### Impact analysis — reference finding
 
@@ -487,35 +355,100 @@ Validate this FMXML snippet before I import it.
 
 | Tool | Description |
 |---|---|
+| `explode_xml_export` | Explode a FileMaker Save-as-XML export into the per-object schema layout. Auto-detects single-file or per-catalog format. |
 | `xml_extract_steps` | List all script steps from a raw FMXML snippet or file content. |
 | `xml_lookup_name` | Resolve a numeric script ID to its name from an XML document. |
 | `xml_trace_dependencies` | Extract all referenced table occurrences, scripts, layouts, and fields from XML content. |
 | `xml_match_revision` | Read the FileMaker version and revision metadata from an XML header. |
-| `validate_fmxmlsnippet` | Run 7-rule structural validation on a generated FMXML snippet and return a pass/fail report with details. |
-| `validate_webviewer_html` | Check generated WebViewer HTML for remote dependencies, risky JavaScript APIs, FileMaker bridge usage, and bundle size. |
-| `write_outbox_artifact` | Save a generated script, layout, or document to the project outbox as a versioned artifact with a manifest entry. |
-| `explode_xml_export` | Explode a FileMaker **Save a Copy as XML** export (single `FMSaveAsXML` file or split-catalog folder — auto-detected) into the per-object schema layout. Explodes every catalog — scripts (+ sanitized `.txt`), tables (fields joined in), layouts, relationships, table occurrences, value lists, custom functions/menus, accounts, privileges, themes — one file per object under `Schema/<database>/`; run `generate_schema_map` afterward. |
+| `validate_fmxmlsnippet` | Run 7-rule structural validation on a generated FMXML snippet and return a pass/fail report. |
+| `validate_webviewer_html` | Check generated WebViewer HTML for remote dependencies, risky JavaScript APIs, and FileMaker bridge usage. |
+| `write_outbox_artifact` | Save a generated script, layout, or document to the project outbox as a versioned artifact. |
 
 ### Specialist skills
 
 | Tool | Description |
 |---|---|
-| `load_skill` | Load a specialist skill by ID into AI context. Available skills: `pro_scriptwriter` (FileMaker scripting patterns), `script_analysis` (structured script audit), `fm_xml_serializer` (valid FMXML generation rules), `script_debug` (systematic debugging approach). |
+| `load_skill` | Load a specialist skill into AI context. Available: `pro_scriptwriter`, `script_analysis`, `fm_xml_serializer`, `script_debug`. |
+
+---
+
+## Troubleshooting
+
+**Seeing only 33 tools (missing `explode_xml_export` / `generate_schema_map`)?**
+
+Your binary is pre-v0.2.0. Reinstall:
+
+```bash
+# macOS/Linux
+curl -fsSL https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/install.sh | sh
+
+# Windows
+irm https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/install.ps1 | iex
+```
+
+Then fully quit and restart your AI tool (the MCP client caches the old process). Confirm with `kibuild-mcp --version`.
+
+**macOS binary blocked by Gatekeeper?**
+
+```bash
+xattr -d com.apple.quarantine /usr/local/bin/kibuild-mcp
+```
+
+Then allow it in **System Settings → Privacy & Security** if prompted.
 
 ---
 
 ## Logging
 
-The server logs all MCP traffic to `~/.fm_ai_bridge/mcp_server.log`. Tail it to debug tool calls:
+The server logs all MCP traffic to `~/.fm_ai_bridge/mcp_server.log`:
 
-**macOS / Linux:**
 ```bash
+# macOS / Linux
 tail -f ~/.fm_ai_bridge/mcp_server.log
+
+# Windows (PowerShell)
+Get-Content -Wait "$env:USERPROFILE\.fm_ai_bridge\mcp_server.log"
 ```
 
-**Windows (PowerShell):**
-```powershell
-Get-Content -Wait "$env:USERPROFILE\.fm_ai_bridge\mcp_server.log"
+---
+
+## Installing from source
+
+**Option A — `go install`** (requires Go 1.21+)
+
+```bash
+go install github.com/priyabratasahoo21/kibuild-mcp@latest
+kibuild-mcp --setup
+```
+
+> `go install` reports version as `dev` — the `--setup` wizard will offer to fetch the latest release binary to get a version-stamped build.
+
+**Option B — Build from source** (requires Go 1.21+)
+
+```bash
+git clone https://github.com/priyabratasahoo21/kibuild-mcp.git
+cd kibuild-mcp
+go build -ldflags="-s -w -X main.Version=v0.2.0" -o kibuild-mcp .
+mv kibuild-mcp /usr/local/bin/
+kibuild-mcp --setup
+```
+
+**Option C — Manual download**
+
+Go to the [Releases page](https://github.com/priyabratasahoo21/kibuild-mcp/releases) and download the binary for your platform:
+
+| Platform | File |
+|---|---|
+| macOS (Apple Silicon) | `kibuild-mcp-darwin-arm64` |
+| macOS (Intel) | `kibuild-mcp-darwin-amd64` |
+| Linux (x86_64) | `kibuild-mcp-linux-amd64` |
+| Linux (ARM64) | `kibuild-mcp-linux-arm64` |
+| Windows | `kibuild-mcp-windows-amd64.exe` |
+
+```bash
+chmod +x kibuild-mcp-*
+sudo mv kibuild-mcp-* /usr/local/bin/kibuild-mcp
+kibuild-mcp --setup
 ```
 
 ---
@@ -523,7 +456,7 @@ Get-Content -Wait "$env:USERPROFILE\.fm_ai_bridge\mcp_server.log"
 ## Architecture
 
 ```
-AI tool (Claude Code, Cursor, Windsurf, VS Code)
+AI tool (Claude Code, Cursor, Windsurf, VS Code, Codex, Antigravity)
   │
   │  spawns subprocess on MCP connect
   ▼
@@ -533,10 +466,10 @@ kibuild-mcp  ← this binary
   └── analysis tools  ← read Schema/ XML files on disk
         works without FileMaker running
 
-Reads from disk:
+Reads from:
   ~/your-project/files/Schema/<DBName>/   ← exported schema (XML files)
   ~/.fm_ai_bridge/active_project.txt      ← current project pointer
-  ~/your-project/workspace_map.md         ← built on first run of generate_schema_map
+  ~/your-project/workspace_map.md         ← built by generate_schema_map
 ```
 
 ---
