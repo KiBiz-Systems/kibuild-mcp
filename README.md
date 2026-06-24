@@ -90,6 +90,11 @@ irm https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/install
 ```
 *Installs to `%LOCALAPPDATA%\Programs\kibuild-mcp\kibuild-mcp.exe` and appends it to your User PATH.*
 
+> **PowerShell execution policy:** If you get a "running scripts is disabled" error, run this first (one-time, per user):
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
+
 ---
 
 **Option B — Manual download**
@@ -157,7 +162,7 @@ Pick your tool below. Paste the snippet into the config file shown, replacing `/
 
 #### Claude Code
 
-Config file: `~/.claude.json`
+**macOS / Linux** — Config file: `~/.claude.json`
 
 ```json
 {
@@ -172,7 +177,24 @@ Config file: `~/.claude.json`
 }
 ```
 
-> **Windows path:** use `"command": "C:\\Users\\<YourName>\\AppData\\Local\\Programs\\kibuild-mcp\\kibuild-mcp.exe"`
+**Windows** — Config file: `C:\Users\<YourName>\.claude.json`
+
+Open it in any text editor (create it if it doesn't exist) and use forward slashes or escaped backslashes for the path:
+
+```json
+{
+  "mcpServers": {
+    "kibuild": {
+      "command": "C:/Users/<YourName>/AppData/Local/Programs/kibuild-mcp/kibuild-mcp.exe",
+      "env": {
+        "KIBUILD_ACTIVE_PROJECT": "C:/Users/<YourName>/Documents/MyFileMakerProject"
+      }
+    }
+  }
+}
+```
+
+> **Windows tip:** Forward slashes (`/`) work in JSON on Windows. Double-backslashes (`C:\\Users\\...`) also work, but forward slashes are easier to read and less error-prone.
 
 After editing, restart Claude Code (or run `/mcp` to reload servers).
 
@@ -284,11 +306,19 @@ Config file: User `settings.json` (`Ctrl+Shift+P` → "Open User Settings JSON")
 
 Once the server is registered, ask your AI tool:
 
+**macOS / Linux:**
 ```
-Call generate_schema_map for my project at /path/to/your/project
+Call generate_schema_map for my project at /Users/yourname/Documents/MyFileMakerProject
 ```
 
-This scans your `files/Schema/` folder and writes `workspace_map.md` to your project root. After that, all navigation and reference tools are live. The index auto-refreshes whenever schema files change.
+**Windows:**
+```
+Call generate_schema_map for my project at C:/Users/YourName/Documents/MyFileMakerProject
+```
+
+> Use the same path you set in `KIBUILD_ACTIVE_PROJECT`. Forward slashes work on all platforms.
+
+This scans your schema folder and writes `workspace_map.md` to your project root. After that, all navigation and reference tools are live. The index auto-refreshes whenever schema files change.
 
 ---
 
@@ -376,8 +406,14 @@ Validate this FMXML snippet before I import it.
 
 The server logs all MCP traffic to `~/.fm_ai_bridge/mcp_server.log`. Tail it to debug tool calls:
 
+**macOS / Linux:**
 ```bash
 tail -f ~/.fm_ai_bridge/mcp_server.log
+```
+
+**Windows (PowerShell):**
+```powershell
+Get-Content -Wait "$env:USERPROFILE\.fm_ai_bridge\mcp_server.log"
 ```
 
 ---
