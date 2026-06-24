@@ -159,10 +159,6 @@ func ExecuteTool(ctx context.Context, name string, argsJSON string) (string, err
 		}
 		return DiffPatch(sandboxed, args.Content)
 
-	case "propose_preview":
-		// Deprecated: use write_outbox_artifact instead — it saves files and returns clickable file:// links.
-		return "propose_preview is deprecated. Use write_outbox_artifact to save scripts to the outbox.", nil
-
 	case "generate_schema_map":
 		var args struct {
 			ProjectPath string `json:"project_path"`
@@ -579,9 +575,6 @@ func ExecuteTool(ctx context.Context, name string, argsJSON string) (string, err
 		}
 		return SearchIndex(projectPath, args.Query, args.FilterType)
 
-	case "list_workflows":
-		return ListWorkflowsTool()
-
 	case "load_skill":
 		var args struct {
 			SkillID string `json:"skill_id"`
@@ -590,15 +583,6 @@ func ExecuteTool(ctx context.Context, name string, argsJSON string) (string, err
 			return "", fmt.Errorf("invalid arguments: %v", err)
 		}
 		return LoadSkillTool(args.SkillID)
-
-	case "get_workflow":
-		var args struct {
-			WorkflowID string `json:"workflow_id"`
-		}
-		if err := json.Unmarshal([]byte(argsJSON), &args); err != nil {
-			return "", fmt.Errorf("invalid arguments: %v", err)
-		}
-		return GetWorkflowTool(args.WorkflowID)
 
 	default:
 		return "", fmt.Errorf("unknown tool: %s", name)

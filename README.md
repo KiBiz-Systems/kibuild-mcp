@@ -2,7 +2,7 @@
 
 A self-contained MCP server that gives any AI coding tool deep, read-level access to a Claris FileMaker schema — no FileMaker license required at runtime for schema analysis.
 
-Register one binary in your MCP config. Your AI tool (Claude Code, Cursor, Windsurf, VS Code) immediately gains 36 FileMaker-aware tools: script navigation, impact analysis across the full dependency graph, XML generation and validation, and live FileMaker execution when the KiBuild plugin is connected.
+Register one binary in your MCP config. Your AI tool (Claude Code, Cursor, Windsurf, VS Code) immediately gains FileMaker-aware tools: script navigation, impact analysis across the full dependency graph, XML generation and validation, specialist skills, and live FileMaker execution when the KiBuild plugin is connected.
 
 ---
 
@@ -17,8 +17,8 @@ Trace anything to anything: which layouts trigger a script, which scripts naviga
 ### XML analysis and generation
 Extract and list script steps from XML, validate generated FMXML snippets against 7 structural rules before they reach FileMaker, validate WebViewer HTML for remote dependencies and risky APIs, and write versioned artifacts to the project outbox for review.
 
-### Skills and workflows
-Load specialist skill prompts (`pro_scriptwriter`, `script_analysis`, `fm_xml_serializer`, `script_debug`) and structured workflow procedures (`create_script`, `refactor_script`, `analyze_script`, and more) directly into AI context.
+### Specialist skills
+Load curated FileMaker skill prompts (`pro_scriptwriter`, `script_analysis`, `fm_xml_serializer`, `script_debug`) directly into AI context to inject domain-specific guidance for writing, analyzing, or debugging scripts.
 
 ### Live FileMaker execution (optional)
 When the KiBuild C++ plugin is running and connected, `run_script` and `execute_sql` execute against the active FileMaker database over IPC. All other 34 tools work without FileMaker running.
@@ -282,16 +282,13 @@ Any tool name listed there is excluded from `tools/list` and blocked at call tim
 | `xml_match_revision` | Read the FileMaker version and revision metadata from an XML header. |
 | `validate_fmxmlsnippet` | Run 7-rule structural validation on a generated FMXML snippet and return a pass/fail report with details. |
 | `validate_webviewer_html` | Check generated WebViewer HTML for remote dependencies, risky JavaScript APIs, FileMaker bridge usage, and bundle size. |
-| `propose_preview` | Propose a structured preview of a script or layout diff for rendering in a UI panel. |
 | `write_outbox_artifact` | Save a generated script, layout, or document to the project outbox as a versioned artifact with a manifest entry. |
 
-### Skills and workflows
+### Specialist skills
 
 | Tool | Description |
 |---|---|
-| `list_workflows` | List all available KiBuild workflows with their IDs and descriptions. |
-| `get_workflow` | Load the full step-by-step procedure of a workflow by ID (e.g. `create_script`, `refactor_script`, `analyze_script`). |
-| `load_skill` | Load the full instruction content of a specialist skill by ID (e.g. `pro_scriptwriter`, `script_analysis`, `fm_xml_serializer`, `script_debug`). |
+| `load_skill` | Load a specialist skill by ID into AI context. Available skills: `pro_scriptwriter` (FileMaker scripting patterns), `script_analysis` (structured script audit), `fm_xml_serializer` (valid FMXML generation rules), `script_debug` (systematic debugging approach). |
 
 ### Live FileMaker execution — requires KiBuild plugin
 
@@ -324,7 +321,7 @@ AI tool (Claude Code, Cursor, Windsurf, VS Code)
 kibuild-mcp  ← this binary
   │  MCP JSON-RPC over stdin/stdout (protocol 2024-11-05)
   │
-  ├── 34 analysis tools  ← read Schema/ XML files on disk
+  ├── analysis tools  ← read Schema/ XML files on disk
   │     works with no FileMaker running
   │
   └──  2 live-exec tools  ← IPC → KiBuild C++ Plugin → FileMaker

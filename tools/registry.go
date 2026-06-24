@@ -182,29 +182,6 @@ func GetToolsSchema() []providers.Tool {
 			}`),
 		},
 		{
-			Name:        "propose_preview",
-			Description: "Propose a structured preview of a script diff or DB table schema to be rendered directly in the UI tabs.",
-			Parameters: json.RawMessage(`{
-				"type": "object",
-				"properties": {
-					"type": {
-						"type": "string",
-						"enum": ["script", "layout", "schema"],
-						"description": "The type of content to preview"
-					},
-					"name": {
-						"type": "string",
-						"description": "The name of the script or table occurrence"
-					},
-					"content": {
-						"type": "string",
-						"description": "The XML/JSON content or script steps payload"
-					}
-				},
-				"required": ["type", "name", "content"]
-			}`),
-		},
-		{
 			Name:        "generate_schema_map",
 			Description: "Generate a compact markdown map (workspace_map.md) of the workspace tables, fields, scripts, and layouts, facilitating RAG analysis.",
 			Parameters: json.RawMessage(`{
@@ -813,13 +790,8 @@ func GetToolsSchema() []providers.Tool {
 
 	allTools = append(allTools,
 		providers.Tool{
-			Name:        "list_workflows",
-			Description: "List all available KiBuild workflows with their IDs and descriptions. Call this first to understand which workflow fits the current task before calling load_skill.",
-			Parameters:  json.RawMessage(`{"type":"object","properties":{},"required":[]}`),
-		},
-		providers.Tool{
 			Name:        "load_skill",
-			Description: "Load the full instruction content of a named skill by its ID (e.g. 'pro_scriptwriter', 'script_analysis', 'fm_xml_serializer'). Call list_workflows first to identify which skills are relevant, then call this to pull the skill's guidance into context.",
+			Description: "Load the full instruction content of a specialist skill by its ID (e.g. 'pro_scriptwriter', 'script_analysis', 'fm_xml_serializer', 'script_debug'). Injects FileMaker-specific guidance into AI context for the current task.",
 			Parameters: json.RawMessage(`{
 				"type": "object",
 				"properties": {
@@ -829,20 +801,6 @@ func GetToolsSchema() []providers.Tool {
 					}
 				},
 				"required": ["skill_id"]
-			}`),
-		},
-		providers.Tool{
-			Name:        "get_workflow",
-			Description: "Load the full procedure content of a named workflow by its ID (e.g. 'create_script', 'refactor_script', 'analyze_script'). Use after list_workflows to fetch the step-by-step instructions for a chosen workflow.",
-			Parameters: json.RawMessage(`{
-				"type": "object",
-				"properties": {
-					"workflow_id": {
-						"type": "string",
-						"description": "The workflow ID to load (e.g. 'create_script', 'refactor_script', 'analyze_script', 'add_to_script', 'test_script')"
-					}
-				},
-				"required": ["workflow_id"]
 			}`),
 		},
 	)
@@ -894,12 +852,9 @@ var safeMCPTools = map[string]bool{
 	"validate_fmxmlsnippet":                     true,
 	"validate_webviewer_html":                   true,
 	"write_outbox_artifact":                     true,
-	"propose_preview":                           true,
 	"get_active_context":                        true,
 	"read_xml_guide":                            true,
-	"list_workflows":                            true,
 	"load_skill":                                true,
-	"get_workflow":                              true,
 }
 
 func IsSafeMCPTool(name string) bool {

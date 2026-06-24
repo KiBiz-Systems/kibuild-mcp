@@ -1,21 +1,19 @@
 package tools
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
 
 	"kibuild/mcp/skills"
-	"kibuild/mcp/workflows"
 )
 
 var (
-	globalSkillsDir   string
-	skillsDirMu       sync.RWMutex
+	globalSkillsDir string
+	skillsDirMu     sync.RWMutex
 )
 
-// SetSkillsDir registers the skills directory so list_workflows/load_skill tools can use it.
+// SetSkillsDir registers the skills directory so load_skill can use it.
 func SetSkillsDir(dir string) {
 	skillsDirMu.Lock()
 	defer skillsDirMu.Unlock()
@@ -26,39 +24,6 @@ func getSkillsDir() string {
 	skillsDirMu.RLock()
 	defer skillsDirMu.RUnlock()
 	return globalSkillsDir
-}
-
-// ListWorkflowsTool returns a JSON summary of all available workflows (id + name + description).
-func ListWorkflowsTool() (string, error) {
-	list, err := workflows.ListWorkflows()
-	if err != nil {
-		return "", fmt.Errorf("failed to list workflows: %w", err)
-	}
-
-	type workflowSummary struct {
-		ID          string `json:"id"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-	}
-
-	var summaries []workflowSummary
-	for _, wf := range list {
-		summaries = append(summaries, workflowSummary{
-			ID:          wf.ID,
-			Name:        wf.Name,
-			Description: wf.Description,
-		})
-	}
-
-	b, err := json.MarshalIndent(summaries, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("failed to serialize workflows: %w", err)
-	}
-
-	var sb strings.Builder
-	sb.WriteString("Available workflows (call get_workflow with the id to load full instructions, or load_skill to load a specialist skill):\n\n")
-	sb.Write(b)
-	return sb.String(), nil
 }
 
 // LoadSkillTool returns the full markdown content of a skill by ID.
@@ -89,30 +54,9 @@ func LoadSkillTool(skillID string) (string, error) {
 		}
 	}
 
-	// Build list of available IDs for a helpful error
 	var available []string
 	for _, s := range allSkills {
 		available = append(available, s.ID)
 	}
 	return "", fmt.Errorf("skill %q not found. Available skills: %s", skillID, strings.Join(available, ", "))
-}
-
-// GetWorkflowTool returns the full markdown content of a workflow by ID.
-func GetWorkflowTool(workflowID string) (string, error) {
-	if workflowID == "" {
-		return "", fmt.Errorf("workflow_id is required")
-	}
-
-	wf, err := workflows.GetWorkflow(workflowID)
-	if err != nil {
-		return "", fmt.Errorf("workflow %q not found: %w", workflowID, err)
-	}
-
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("# Workflow: %s\n\n", wf.Name))
-	if wf.Description != "" {
-		sb.WriteString(fmt.Sprintf("%s\n\n", wf.Description))
-	}
-	sb.WriteString(wf.Content)
-	return sb.String(), nil
 }
