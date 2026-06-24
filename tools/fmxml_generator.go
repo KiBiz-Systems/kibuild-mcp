@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"text/template"
+
+	"github.com/priyabratasahoo21/kibuild-mcp/templates"
 )
 
 type StepJSON struct {
@@ -43,75 +45,76 @@ var templateSubdirs = []string{
 var (
 	stepCatalog     map[string]CatalogStep
 	stepCatalogNorm map[string]CatalogStep // lowercase-keyed for case-insensitive lookup
-	catalogOnce     sync.Once
-	catalogLoadErr  error
+	catalogMu       sync.Mutex
+	catalogLoaded   bool
 )
 
 func loadCatalog(projectPath string) error {
-	catalogOnce.Do(func() {
-		var catalogPath string
-		var basePaths []string
-		if projectPath != "" {
-			basePaths = append(basePaths, filepath.Join(projectPath, "sidecar", "tools", "catalogs"))
-		}
-		if cwd, err := os.Getwd(); err == nil {
-			basePaths = append(basePaths, filepath.Join(cwd, "sidecar", "tools", "catalogs"))
-		}
-		if execPath, err := os.Executable(); err == nil {
-			execDir := filepath.Dir(execPath)
-			basePaths = append(basePaths, filepath.Join(execDir, "tools", "catalogs"))
-			basePaths = append(basePaths, filepath.Join(execDir, "sidecar", "tools", "catalogs"))
-			parent := execDir
-			for i := 0; i < 5; i++ {
-				basePaths = append(basePaths, filepath.Join(parent, "sidecar", "tools", "catalogs"))
-				basePaths = append(basePaths, filepath.Join(parent, "tools", "catalogs"))
-				pDir := filepath.Dir(parent)
-				if pDir == parent {
-					break
-				}
-				parent = pDir
-			}
-		}
+	catalogMu.Lock()
+	defer catalogMu.Unlock()
 
-		for _, base := range basePaths {
-			p := filepath.Join(base, "step-catalog-en.json")
-			if _, err := os.Stat(p); err == nil {
-				catalogPath = p
+	// Already loaded successfully; nothing to do. A failed attempt leaves
+	// catalogLoaded false so a later call with a valid projectPath can retry.
+	if catalogLoaded {
+		return nil
+	}
+
+	data, err := readCatalogData(projectPath)
+	if err != nil {
+		return err
+	}
+
+	var catalog []CatalogStep
+	if err := json.Unmarshal(data, &catalog); err != nil {
+		return err
+	}
+
+	stepCatalog = make(map[string]CatalogStep, len(catalog))
+	stepCatalogNorm = make(map[string]CatalogStep, len(catalog))
+	for _, step := range catalog {
+		stepCatalog[step.Name] = step
+		stepCatalogNorm[strings.ToLower(step.Name)] = step
+	}
+	catalogLoaded = true
+	return nil
+}
+
+// readCatalogData returns the step-catalog JSON, preferring a copy found on
+// disk (so a project can override it) and falling back to the catalog embedded
+// in the binary so the standalone server always has one.
+func readCatalogData(projectPath string) ([]byte, error) {
+	var basePaths []string
+	if projectPath != "" {
+		basePaths = append(basePaths, filepath.Join(projectPath, "sidecar", "tools", "catalogs"))
+	}
+	if cwd, err := os.Getwd(); err == nil {
+		basePaths = append(basePaths, filepath.Join(cwd, "sidecar", "tools", "catalogs"))
+	}
+	if execPath, err := os.Executable(); err == nil {
+		execDir := filepath.Dir(execPath)
+		basePaths = append(basePaths, filepath.Join(execDir, "tools", "catalogs"))
+		basePaths = append(basePaths, filepath.Join(execDir, "sidecar", "tools", "catalogs"))
+		parent := execDir
+		for i := 0; i < 5; i++ {
+			basePaths = append(basePaths, filepath.Join(parent, "sidecar", "tools", "catalogs"))
+			basePaths = append(basePaths, filepath.Join(parent, "tools", "catalogs"))
+			pDir := filepath.Dir(parent)
+			if pDir == parent {
 				break
 			}
+			parent = pDir
 		}
+	}
 
-		if catalogPath == "" {
-			catalogLoadErr = fmt.Errorf("step-catalog-en.json not found in sidecar/tools/catalogs")
-			// Reset so the next call with a valid projectPath can retry.
-			catalogOnce = sync.Once{}
-			return
+	for _, base := range basePaths {
+		p := filepath.Join(base, "step-catalog-en.json")
+		if data, err := os.ReadFile(p); err == nil {
+			return data, nil
 		}
+	}
 
-		data, err := os.ReadFile(catalogPath)
-		if err != nil {
-			catalogLoadErr = err
-			catalogOnce = sync.Once{}
-			return
-		}
-
-		var catalog []CatalogStep
-		if err := json.Unmarshal(data, &catalog); err != nil {
-			catalogLoadErr = err
-			catalogOnce = sync.Once{}
-			return
-		}
-
-		stepCatalog = make(map[string]CatalogStep, len(catalog))
-		stepCatalogNorm = make(map[string]CatalogStep, len(catalog))
-		for _, step := range catalog {
-			stepCatalog[step.Name] = step
-			stepCatalogNorm[strings.ToLower(step.Name)] = step
-		}
-		// Clear any previous error on success.
-		catalogLoadErr = nil
-	})
-	return catalogLoadErr
+	// Embedded fallback — always present in the built binary.
+	return catalogFS.ReadFile("catalogs/step-catalog-en.json")
 }
 
 // lookupCatalogStep finds a step by exact name first, then falls back to
@@ -167,7 +170,10 @@ var simpleOnlySteps = func() map[string]struct{} {
 	return m
 }()
 
-func getTemplatePath(projectPath string, stepName string) string {
+// loadTemplateContent returns the XML template for a step, preferring a copy
+// found on disk (so a project can override it) and falling back to the
+// templates embedded in the binary. The bool reports whether one was found.
+func loadTemplateContent(projectPath string, stepName string) (string, bool) {
 	safeName := strings.ReplaceAll(stepName, "/", "-")
 
 	var basePaths []string
@@ -196,12 +202,20 @@ func getTemplatePath(projectPath string, stepName string) string {
 	for _, base := range basePaths {
 		for _, subdir := range templateSubdirs {
 			path := filepath.Join(base, subdir, safeName+".xml")
-			if _, err := os.Stat(path); err == nil {
-				return path
+			if data, err := os.ReadFile(path); err == nil {
+				return string(data), true
 			}
 		}
 	}
-	return ""
+
+	// Embedded fallback — always present in the built binary. embed.FS always
+	// uses forward slashes regardless of host OS.
+	for _, subdir := range templateSubdirs {
+		if data, err := templates.FS.ReadFile("fmxml/" + subdir + "/" + safeName + ".xml"); err == nil {
+			return string(data), true
+		}
+	}
+	return "", false
 }
 
 // CompileScript converts JSON script steps to FileMaker XML snippet
@@ -265,17 +279,12 @@ func CompileScript(projectPath string, aiJsonData []byte) (string, error) {
 		if exists {
 			canonicalName = catalogStep.Name
 		}
-		tmplPath := getTemplatePath(projectPath, canonicalName)
-		if tmplPath == "" {
+		tmplContent, ok := loadTemplateContent(projectPath, canonicalName)
+		if !ok {
 			return "", fmt.Errorf("step '%s' has no template — use raw_xml for custom steps", step.StepName)
 		}
 
-		tmplContent, err := os.ReadFile(tmplPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to read template for '%s': %v", step.StepName, err)
-		}
-
-		t, err := template.New(step.StepName).Parse(string(tmplContent))
+		t, err := template.New(step.StepName).Parse(tmplContent)
 		if err != nil {
 			return "", fmt.Errorf("failed to parse template for '%s': %v", step.StepName, err)
 		}
