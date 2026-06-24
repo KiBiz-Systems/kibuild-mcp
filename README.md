@@ -44,16 +44,23 @@ When the KiBuild C++ plugin is running and connected, `run_script` and `execute_
 
 ### Where the schema XML can come from
 
-The server indexes an **exploded** schema folder — one XML file per object, grouped into `scripts/`, `layouts/`, `tables/`, and `relationships/` (shown above). Any of the following can produce the XML; they differ in how much "exploding" is left to do:
+The server indexes an **exploded** schema folder — one XML file *per object*, grouped into `scripts/`, `layouts/`, `tables/`, and `relationships/` (shown above). Several things can produce FileMaker XML; they differ in how much "exploding" is left to do:
 
-| Source | FileMaker version | Output | Ready to index? |
-|---|---|---|---|
-| KiBuild plugin **Export Schema** | Any (plugin required) | Exploded tree, one file per object | ✅ Directly |
-| Built-in **DDR** export | Any | `FMPReport` XML | After exploding into per-object files |
-| **Save a Copy as XML** | FileMaker 2025 (v22) | One XML document for the whole file | After exploding |
-| **Per-catalog XML export** | FileMaker 2026 | One XML document per catalog (scripts, tables, layouts, …) | After exploding |
+| Source | Output | Ready to index? |
+|---|---|---|
+| KiBuild plugin **Export Schema** | Exploded tree, one file per object | ✅ Directly |
+| Built-in **DDR** export | One `FMPReport` document for the whole solution | After exploding |
+| **Save a Copy as XML** — single file | One XML document for the whole solution | After exploding |
+| **Save a Copy as XML** — per-catalog option | One file per *catalog* (`Scripts.xml`, `Layouts.xml`, `BaseTables.xml`, …) | After exploding |
 
-FileMaker 2025/2026's native **Save as XML** is a convenient, license-friendly way to get schema XML out without the plugin — and 2026's per-catalog export lets you pull just the catalogs you care about (e.g. only scripts). Note, however, that each of these produces XML where **many objects share a single document** (a whole file, or a whole catalog), whereas the indexing tools expect **one file per object**. So a Save-as-XML or per-catalog export currently has to be split into the per-object folder layout above before `generate_schema_map` can index it — the KiBuild plugin's Export Schema does this splitting for you. Direct ingestion of monolithic Save-as-XML / per-catalog files is not yet supported.
+FileMaker 2025/2026's native **Save a Copy as XML** (available as both a menu command and a script step, configured via JSON options) is a convenient, license-friendly way to get schema XML out without the plugin. Its `per catalog` option writes a separate file for each catalog into a destination folder.
+
+The catch: **per-catalog is not per-object.** Even with the split enabled, *all* scripts are still combined inside a single `Scripts.xml`, all layouts inside `Layouts.xml`, and so on — FileMaker does not explode each script into its own file. The indexing tools here expect one file per object, so a Save-as-XML export still has to be exploded into the per-object folder layout above before `generate_schema_map` can index it. You have two options for that step:
+
+- **KiBuild plugin Export Schema** — produces the exploded per-object tree directly, no extra step.
+- **A community exploder** — tools such as *FM-XML-Export-Exploder* dissect the native `Scripts.xml` / catalog files into individual per-script, per-layout, and per-custom-function files (also handy for Git diffing).
+
+Direct ingestion of monolithic Save-as-XML or per-catalog files (without an explode step) is not yet supported by this server.
 
 ---
 
