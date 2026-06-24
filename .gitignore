@@ -19,6 +19,3 @@ kibuild_config.json
 
 # KiBuild index cache (generated at runtime)
 .kibuild_index/
-
-# Outbox (generated artifacts)
-outbox/
