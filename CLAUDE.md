@@ -39,12 +39,7 @@ KiBuild MCP is a FileMaker-aware MCP server. It provides AI coding tools with st
 
 ## Tool count reference
 
-| State | Expected visible tools |
-|---|---|
-| No plugin connected | ~32 |
-| Plugin connected | ~35 |
-
-If the count is under 30, the binary is likely outdated. Ask the user to reinstall and share the last 20 lines of `~/.fm_ai_bridge/mcp_server.log`.
+KiBuild MCP exposes **32 tools**. If the count is under 28, the binary is likely outdated. Ask the user to reinstall and share the last 20 lines of `~/.fm_ai_bridge/mcp_server.log`.
 
 ## Key tools (v0.2.0+)
 

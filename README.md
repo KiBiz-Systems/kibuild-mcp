@@ -316,6 +316,7 @@ User `settings.json` — open via `Ctrl+Shift+P` → "Open User Settings JSON"
 | `validate_fmxmlsnippet` | Run 7-rule structural validation on a generated FMXML snippet |
 | `validate_webviewer_html` | Check WebViewer HTML for remote dependencies and risky APIs |
 | `write_outbox_artifact` | Save generated output to the project outbox as a versioned artifact |
+| `read_xml_guide` | Load the FileMaker XML snippet reference guide — schemas and templates for script step generation |
 
 ### Specialist skills
 
@@ -364,10 +365,7 @@ Common causes: binary path mismatch in config, Gatekeeper blocking on macOS, PAT
 
 ## Tool count reference
 
-| State | Expected tools |
-|---|---|
-| No FileMaker plugin connected | ~32 |
-| FileMaker plugin connected | ~35 |
+KiBuild MCP exposes **32 tools**. If you see fewer than 28, the binary is likely outdated — run `kibuild-mcp --setup` to self-update, then fully restart Claude Code.
 
 ---
 

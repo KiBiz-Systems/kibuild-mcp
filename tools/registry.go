@@ -68,42 +68,6 @@ func GetToolsSchema() []providers.Tool {
 			}`),
 		},
 		{
-			Name:        "export_schema",
-			Description: "Export the current FileMaker schema using the exploder binary.",
-			Parameters: json.RawMessage(`{
-				"type": "object",
-				"properties": {
-					"database": {
-						"type": "string",
-						"description": "The name of the database file (e.g. Sales.fmp12)"
-					}
-				},
-				"required": ["database"]
-			}`),
-		},
-		{
-			Name:        "read_layout",
-			Description: "Read the XML/JSON representation of a FileMaker layout.",
-			Parameters: json.RawMessage(`{
-				"type": "object",
-				"properties": {
-					"layout_name": {
-						"type": "string",
-						"description": "Name of the layout to read"
-					}
-				},
-				"required": ["layout_name"]
-			}`),
-		},
-		{
-			Name:        "get_active_context",
-			Description: "Get context about the active FileMaker database, layout name, and currently selected record.",
-			Parameters: json.RawMessage(`{
-				"type": "object",
-				"properties": {}
-			}`),
-		},
-		{
 			Name:        "xml_extract_steps",
 			Description: "Extract and list script steps from a FileMaker XML script snippet or file.",
 			Parameters: json.RawMessage(`{
@@ -791,16 +755,6 @@ func GetToolsSchema() []providers.Tool {
 		},
 	)
 
-	if !IsPluginConnected() {
-		var filtered []providers.Tool
-		for _, t := range allTools {
-			if t.Name != "export_schema" && t.Name != "read_layout" && t.Name != "get_active_context" {
-				filtered = append(filtered, t)
-			}
-		}
-		return filtered
-	}
-
 	return allTools
 }
 
@@ -821,8 +775,6 @@ var safeMCPTools = map[string]bool{
 	"find_layout_references_in_calculations":    true,
 	"find_to_references":                        true,
 	"find_relationship_predicates":              true,
-	"export_schema":                             true,
-	"read_layout":                               true,
 	"search_index":                              true,
 	"generate_schema_map":                       true,
 	"find_script":                               true,
@@ -837,7 +789,6 @@ var safeMCPTools = map[string]bool{
 	"validate_webviewer_html":                   true,
 	"write_outbox_artifact":                     true,
 	"explode_xml_export":                        true,
-	"get_active_context":                        true,
 	"read_xml_guide":                            true,
 	"load_skill":                                true,
 }
