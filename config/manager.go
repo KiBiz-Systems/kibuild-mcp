@@ -15,9 +15,6 @@ type Config struct {
 	SQLTimeout               int    `json:"sqlTimeout"`
 	MissionTimeout           int    `json:"mission_timeout"`
 	QueryLimit               int    `json:"queryLimit"`
-	OpenAIAPIKey             string `json:"openai_api_key,omitempty"`
-	AnthropicAPIKey          string `json:"anthropic_api_key,omitempty"`
-	GeminiAPIKey             string `json:"gemini_api_key,omitempty"`
 	PurgeToolOutput          bool   `json:"purge_tool_output"`
 	PurgeThreshold           int    `json:"purge_threshold"`
 	AutoSummarize            bool   `json:"auto_summarize"`
@@ -57,10 +54,6 @@ type SafeConfig struct {
 	PurgeThreshold           int    `json:"purge_threshold"`
 	AutoSummarize            bool   `json:"auto_summarize"`
 	SummarizeThreshold       int    `json:"summarize_threshold"`
-	// HasKeys reports which providers are configured (without revealing the actual keys)
-	HasOpenAI                bool   `json:"has_openai_key"`
-	HasAnthropic             bool   `json:"has_anthropic_key"`
-	HasGemini                bool   `json:"has_gemini_key"`
 	DetectedAntigravityCLI   bool   `json:"detected_antigravity_cli"`
 	DetectedClaudeCLI        bool   `json:"detected_claude_cli"`
 	DetectedCodexCLI         bool   `json:"detected_codex_cli"`
@@ -209,11 +202,6 @@ func (m *Manager) Load(path string) error {
 	m.cfg.AutoSummarize = getBool("auto_summarize", true)
 	m.cfg.SummarizeThreshold = getInt("summarize_threshold", 20000)
 
-	// API Keys from config if present (decrypted)
-	m.cfg.OpenAIAPIKey = DecryptKey(getString("openai_api_key"))
-	m.cfg.AnthropicAPIKey = DecryptKey(getString("anthropic_api_key"))
-	m.cfg.GeminiAPIKey = DecryptKey(getString("gemini_api_key"))
-
 	// CLI permissions
 	m.cfg.AntigravityCLIPermission = getString("antigravity_cli_permission")
 	m.cfg.ClaudeCLIPermission = getString("claude_cli_permission")
@@ -248,32 +236,10 @@ func (m *Manager) Load(path string) error {
 	}
 	m.cfg.DisabledMCPTools = getSlice("disabled_mcp_tools")
 
-	// If a generic "apiKey" is specified and model fits, map it
-	apiKey := getString("apiKey")
-	if apiKey != "" {
-		switch {
-		case strings.HasPrefix(m.cfg.Model, "claude"):
-			m.cfg.AnthropicAPIKey = apiKey
-		case strings.HasPrefix(m.cfg.Model, "gemini"):
-			m.cfg.GeminiAPIKey = apiKey
-		default:
-			m.cfg.OpenAIAPIKey = apiKey
-		}
-	}
-
 	return nil
 }
 
 func (m *Manager) loadEnvOverrides() {
-	if val := os.Getenv("OPENAI_API_KEY"); val != "" {
-		m.cfg.OpenAIAPIKey = val
-	}
-	if val := os.Getenv("ANTHROPIC_API_KEY"); val != "" {
-		m.cfg.AnthropicAPIKey = val
-	}
-	if val := os.Getenv("GEMINI_API_KEY"); val != "" {
-		m.cfg.GeminiAPIKey = val
-	}
 	if val := os.Getenv("KIBUILD_MODEL"); val != "" {
 		m.cfg.Model = val
 	}
@@ -288,19 +254,6 @@ func (m *Manager) GetModel() string {
 
 func (m *Manager) GetMaxTokens() int {
 	return m.cfg.MaxTokens
-}
-
-func (m *Manager) GetAPIKey(provider string) string {
-	switch strings.ToLower(provider) {
-	case "openai":
-		return m.cfg.OpenAIAPIKey
-	case "anthropic":
-		return m.cfg.AnthropicAPIKey
-	case "gemini":
-		return m.cfg.GeminiAPIKey
-	default:
-		return ""
-	}
 }
 
 func (m *Manager) GetActiveProvider() string {
@@ -433,9 +386,6 @@ func (m *Manager) GetSafeConfig() SafeConfig {
 		PurgeThreshold:           m.cfg.PurgeThreshold,
 		AutoSummarize:            m.cfg.AutoSummarize,
 		SummarizeThreshold:       m.cfg.SummarizeThreshold,
-		HasOpenAI:                m.cfg.OpenAIAPIKey != "",
-		HasAnthropic:             m.cfg.AnthropicAPIKey != "",
-		HasGemini:                m.cfg.GeminiAPIKey != "",
 		DetectedAntigravityCLI:         detectedAntiPath != "",
 		DetectedClaudeCLI:              detectedClaudePath != "",
 		DetectedCodexCLI:               detectedCodexPath != "",
@@ -465,17 +415,6 @@ func (m *Manager) GetSafeConfig() SafeConfig {
 }
 
 func (m *Manager) SaveConfig(cfg Config) error {
-	// Preserve existing API keys if new config has them empty (since GetSafeConfig hides them)
-	if cfg.OpenAIAPIKey == "" {
-		cfg.OpenAIAPIKey = m.cfg.OpenAIAPIKey
-	}
-	if cfg.AnthropicAPIKey == "" {
-		cfg.AnthropicAPIKey = m.cfg.AnthropicAPIKey
-	}
-	if cfg.GeminiAPIKey == "" {
-		cfg.GeminiAPIKey = m.cfg.GeminiAPIKey
-	}
-
 	// Clamp CLI mode values — only "mcp" and "contract" are valid.
 	// Any unrecognised or empty string falls back to "contract".
 	clampMode := func(mode string) string {
@@ -491,23 +430,7 @@ func (m *Manager) SaveConfig(cfg Config) error {
 	m.cfg = cfg
 
 
-	// Encrypt keys in a copy of the config before marshaling to file
-	fileCfg := cfg
-	var err error
-	fileCfg.OpenAIAPIKey, err = EncryptKey(cfg.OpenAIAPIKey)
-	if err != nil {
-		return err
-	}
-	fileCfg.AnthropicAPIKey, err = EncryptKey(cfg.AnthropicAPIKey)
-	if err != nil {
-		return err
-	}
-	fileCfg.GeminiAPIKey, err = EncryptKey(cfg.GeminiAPIKey)
-	if err != nil {
-		return err
-	}
-
-	data, err := json.MarshalIndent(fileCfg, "", "  ")
+	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return err
 	}
