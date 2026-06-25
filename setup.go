@@ -38,7 +38,7 @@ func runSetup() int {
 	fmt.Printf("Platform:          %s/%s\n\n", runtime.GOOS, runtime.GOARCH)
 
 	// ── Step 1: Version check + optional self-update ────────────────────────
-	fmt.Println("[1/4] Checking for the latest version...")
+	fmt.Println("[1/5] Checking for the latest version...")
 	latest, err := fetchLatestVersion()
 	if err != nil {
 		fmt.Printf("      Could not reach GitHub (%v).\n", err)
@@ -65,7 +65,7 @@ func runSetup() int {
 	fmt.Println()
 
 	// ── Step 2: Project path ────────────────────────────────────────────────
-	fmt.Println("[2/4] FileMaker project folder")
+	fmt.Println("[2/5] FileMaker project folder")
 	fmt.Println("      The folder that contains (or will contain) files/Schema/.")
 	def := suggestProjectPath()
 	if def != "" {
@@ -90,7 +90,7 @@ func runSetup() int {
 	fmt.Println()
 
 	// ── Step 3: Write MCP config ────────────────────────────────────────────
-	fmt.Println("[3/4] Writing Claude Code MCP config...")
+	fmt.Println("[3/5] Writing Claude Code MCP config...")
 	exePath, err := os.Executable()
 	if err != nil || exePath == "" {
 		exePath = defaultBinaryPath()
@@ -110,9 +110,12 @@ func runSetup() int {
 	fmt.Println()
 
 	// ── Step 4: Verify tools ────────────────────────────────────────────────
-	fmt.Println("[4/4] Verifying tools are accessible...")
+	fmt.Println("[4/5] Verifying tools are accessible...")
 	verifyTools()
 	fmt.Println()
+
+	// ── Step 5: Install AI guide files ──────────────────────────────────────
+	installAIGuides()
 
 	fmt.Println("────────────────────────────────────────────────")
 	fmt.Println("  Restart Claude Code (close and reopen), then")

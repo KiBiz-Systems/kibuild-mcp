@@ -4,6 +4,15 @@
 
 If the user types **"Help me set up KiBuild MCP"** or **"Set up KiBuild MCP"**, run the `/setup-kibuild` wizard automatically: detect the OS, install the binary, configure the MCP server in `~/.claude.json`, verify the tool count, and offer to test with an XML export. Follow the steps in `.claude/commands/setup-kibuild.md` exactly.
 
+## Project initialization command
+
+Run `/init-kibuild-project` inside any FileMaker project directory to generate three AI guide files:
+- **`CLAUDE.md`** — instructs Claude Code to prefer KiBuild MCP tools over grep/bash
+- **`AGENTS.md`** — same, for OpenAI Codex CLI and ChatGPT Agents
+- **`GEMINI.md`** — same, for Google Gemini CLI
+
+Each file contains explicit tool-substitution rules (e.g. "use `find_script` instead of grep") so the AI picks the right tool without being told each time. Command lives at `.claude/commands/init-kibuild-project.md`.
+
 ## Native setup command
 
 The binary has a built-in interactive wizard — `kibuild-mcp --setup` — that checks the version (self-updates from GitHub if behind), prompts for the project path, safely merges the MCP entry into `~/.claude.json`, and verifies the tool registry. The install scripts hand off to it after downloading the binary. All config/verify logic lives in [setup.go](setup.go), so it behaves identically on macOS, Linux, and Windows. `kibuild-mcp --version` prints the version (injected at build time via `-ldflags "-X main.Version=..."`; defaults to `dev`).

@@ -1,0 +1,34 @@
+---
+description: KiBuild MCP tool preference rules for FileMaker projects
+globs: "**"
+alwaysApply: true
+---
+
+# KiBuild MCP Rules
+
+This machine has KiBuild MCP installed. When working in a FileMaker project,
+always prefer KiBuild MCP tools over grep, find, or reading raw XML files.
+
+## Tool substitution rules
+
+| Instead of... | Use this KiBuild MCP tool |
+|---|---|
+| `grep` for a script name | `find_script` |
+| `grep` for a table name | `find_table` |
+| `grep` for a layout name | `find_layout` |
+| `grep` / `find` for keywords | `search_index` |
+| Reading or catting XML files | `xml_extract_steps` |
+| `grep` for a name in XML | `xml_lookup_name` |
+| Tracing relationships manually | `inspect_relationships` |
+| `grep` for field usage | `find_field_references_in_calculations` / `_in_scripts` / `_in_layouts` / `_in_relationships` |
+| `grep` for script call sites | `find_script_references_in_scripts` / `_in_layouts` |
+| `grep` for layout references | `find_layout_references_in_calculations` / `_to_scripts` |
+| `grep` for variable usage | `find_variable_references_in_scripts` |
+| Running FileMaker SQL | `execute_sql` |
+| Writing generated output | `write_outbox_artifact` |
+
+## Session startup
+
+1. Call `load_skill` first — loads the right specialist context for the task
+2. Call `search_index` to orient in the schema before diving in
+3. Never cat or grep raw XML — use `xml_extract_steps` instead
