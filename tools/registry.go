@@ -348,7 +348,7 @@ func GetToolsSchema() []providers.Tool {
 		},
 		{
 			Name:        "find_layout_references_to_scripts",
-			Description: "Find references related to layout names",
+			Description: "Given layout names, find which scripts those layouts call or trigger. Use this to discover script dependencies of a specific layout.",
 			Parameters: json.RawMessage(`{
 				    "type": "object",
 				    "properties": {
@@ -357,7 +357,7 @@ func GetToolsSchema() []providers.Tool {
 				            "items": {
 				                "type": "string"
 				            },
-				            "description": "List of layout names to inspect"
+				            "description": "List of layout names whose script references you want to find"
 				        },
 				        "database": {
 				            "type": "string",
@@ -371,7 +371,7 @@ func GetToolsSchema() []providers.Tool {
 		},
 		{
 			Name:        "find_layout_references_to_valuelists",
-			Description: "Find references related to layout names",
+			Description: "Given layout names, find which value lists those layouts use. Use this to discover value list dependencies of a specific layout.",
 			Parameters: json.RawMessage(`{
 				    "type": "object",
 				    "properties": {
@@ -380,7 +380,7 @@ func GetToolsSchema() []providers.Tool {
 				            "items": {
 				                "type": "string"
 				            },
-				            "description": "List of layout names to inspect"
+				            "description": "List of layout names whose value list references you want to find"
 				        },
 				        "database": {
 				            "type": "string",
@@ -394,7 +394,7 @@ func GetToolsSchema() []providers.Tool {
 		},
 		{
 			Name:        "find_layout_references_to_tables",
-			Description: "Find references related to layout names",
+			Description: "Given layout names, find which table occurrences those layouts are bound to. Use this to discover the table context of a specific layout.",
 			Parameters: json.RawMessage(`{
 				    "type": "object",
 				    "properties": {
@@ -403,7 +403,7 @@ func GetToolsSchema() []providers.Tool {
 				            "items": {
 				                "type": "string"
 				            },
-				            "description": "List of layout names to inspect"
+				            "description": "List of layout names whose table occurrence bindings you want to find"
 				        },
 				        "database": {
 				            "type": "string",
@@ -417,7 +417,7 @@ func GetToolsSchema() []providers.Tool {
 		},
 		{
 			Name:        "find_script_references_in_scripts",
-			Description: "Find references related to script names",
+			Description: "Given script names, find which other scripts call or reference them. Use this to discover where a script is used across the solution.",
 			Parameters: json.RawMessage(`{
 				    "type": "object",
 				    "properties": {
@@ -426,7 +426,7 @@ func GetToolsSchema() []providers.Tool {
 				            "items": {
 				                "type": "string"
 				            },
-				            "description": "List of script names to inspect"
+				            "description": "List of script names to find callers of"
 				        },
 				        "database": {
 				            "type": "string",
@@ -440,7 +440,7 @@ func GetToolsSchema() []providers.Tool {
 		},
 		{
 			Name:        "find_script_references_in_layouts",
-			Description: "Find references related to script names",
+			Description: "Given script names, find which layouts trigger or reference them (e.g. via buttons or script triggers). Use this to discover which layouts depend on a script.",
 			Parameters: json.RawMessage(`{
 				    "type": "object",
 				    "properties": {
@@ -449,7 +449,7 @@ func GetToolsSchema() []providers.Tool {
 				            "items": {
 				                "type": "string"
 				            },
-				            "description": "List of script names to inspect"
+				            "description": "List of script names to find layout references for"
 				        },
 				        "database": {
 				            "type": "string",
@@ -463,7 +463,7 @@ func GetToolsSchema() []providers.Tool {
 		},
 		{
 			Name:        "find_script_references_to_layouts",
-			Description: "Find references related to script names",
+			Description: "Given script names, find which layouts those scripts navigate to (e.g. via Go to Layout steps). Use this to discover layout dependencies of a script.",
 			Parameters: json.RawMessage(`{
 				    "type": "object",
 				    "properties": {
@@ -472,7 +472,7 @@ func GetToolsSchema() []providers.Tool {
 				            "items": {
 				                "type": "string"
 				            },
-				            "description": "List of script names to inspect"
+				            "description": "List of script names whose layout navigation references you want to find"
 				        },
 				        "database": {
 				            "type": "string",
@@ -486,7 +486,7 @@ func GetToolsSchema() []providers.Tool {
 		},
 		{
 			Name:        "find_script_references_to_valuelists",
-			Description: "Find references related to script names",
+			Description: "Given script names, find which value lists those scripts reference or populate. Use this to discover value list dependencies of a script.",
 			Parameters: json.RawMessage(`{
 				    "type": "object",
 				    "properties": {
@@ -495,7 +495,7 @@ func GetToolsSchema() []providers.Tool {
 				            "items": {
 				                "type": "string"
 				            },
-				            "description": "List of script names to inspect"
+				            "description": "List of script names whose value list references you want to find"
 				        },
 				        "database": {
 				            "type": "string",
@@ -647,7 +647,7 @@ func GetToolsSchema() []providers.Tool {
 		},
 		{
 			Name:        "find_layout_references_in_calculations",
-			Description: "Find references related to layout names",
+			Description: "Given layout names, find which calculations reference them. Use this to discover where a layout name appears in calculated expressions across the solution.",
 			Parameters: json.RawMessage(`{
 				    "type": "object",
 				    "properties": {
@@ -656,7 +656,7 @@ func GetToolsSchema() []providers.Tool {
 				            "items": {
 				                "type": "string"
 				            },
-				            "description": "List of layout names to inspect"
+				            "description": "List of layout names to search for in calculations"
 				        },
 				        "database": {
 				            "type": "string",
@@ -670,7 +670,7 @@ func GetToolsSchema() []providers.Tool {
 		},
 		{
 			Name:        "find_to_references",
-			Description: "Find references related to table occurrence names",
+			Description: "Given table occurrence (TO) names, find all schema objects that reference them — scripts, layouts, calculations, and relationships. Use this to understand the full impact of a table occurrence.",
 			Parameters: json.RawMessage(`{
 				    "type": "object",
 				    "properties": {
@@ -693,7 +693,7 @@ func GetToolsSchema() []providers.Tool {
 		},
 		{
 			Name:        "find_relationship_predicates",
-			Description: "Find references related to table occurrence names",
+			Description: "Given table occurrence names, find the join predicates (match field conditions) defined on relationships that involve those table occurrences. Use this to understand how two table occurrences are related and what fields drive the join.",
 			Parameters: json.RawMessage(`{
 				    "type": "object",
 				    "properties": {
@@ -702,7 +702,7 @@ func GetToolsSchema() []providers.Tool {
 				            "items": {
 				                "type": "string"
 				            },
-				            "description": "List of table occurrence names to inspect"
+				            "description": "List of table occurrence names whose relationship join conditions you want to inspect"
 				        },
 				        "database": {
 				            "type": "string",
