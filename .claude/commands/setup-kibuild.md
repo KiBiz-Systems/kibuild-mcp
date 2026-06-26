@@ -88,7 +88,7 @@ Expected counts:
 
 ## Step 7 — Optional: test with an XML export
 
-Ask: **"Do you have a FileMaker XML export file (File → Save a Copy as XML) to test with?"**
+Ask: **"Do you have a FileMaker XML export file to test with? You can create one via Tools → Save as XML (all versions) or File → Export → Catalog Export (FileMaker 2026+, produces a split-catalog folder)."**
 
 - Yes: ask for the path, call `explode_xml_export` with that path. Confirm the `Schema/<database>/` folder was created. Then call `generate_schema_map` to build the index.
 - No: setup is complete.

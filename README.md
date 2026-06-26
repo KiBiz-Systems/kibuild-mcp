@@ -30,10 +30,9 @@ When an AI uses `grep` or reads raw XML to answer a FileMaker question, it is fl
 ```
 Your FileMaker file
       │
-      │  File → Save a Copy as XML  (FileMaker 2025 and earlier)
-      │  OR  File → Catalog Export  (FileMaker 2026+)
+      │  Tools → Save a Copy as XML…  (or via script step)
       ▼
-Single XML export  ──→  explode_xml_export  ──→  Schema/<db>/
+XML export  ──→  explode_xml_export  ──→  Schema/<db>/
                                                     scripts/
                                                     layouts/
                                                     tables/
@@ -51,9 +50,7 @@ Single XML export  ──→  explode_xml_export  ──→  Schema/<db>/
                                            32 KiBuild tools live and ready
 ```
 
-The exploder handles both export formats automatically:
-- **FileMaker 2025 and earlier** — `File → Save a Copy as → XML` produces a single `.xml` file. The exploder splits it into one file per script, layout, table, and relationship.
-- **FileMaker 2026+** — Catalog Export produces a similar structure. The exploder detects the format and processes it the same way.
+Export your schema from FileMaker using **Tools → Save a Copy as XML…** or a script step — see Step 2 for full instructions. The exploder auto-detects the export format and processes it into one file per object.
 
 ---
 
@@ -86,15 +83,31 @@ The installer downloads the binary, runs `kibuild-mcp --setup` to configure your
 
 You need to export your schema from FileMaker once. After that, the exploder keeps it as a searchable file tree.
 
-**FileMaker 2025 and earlier:**
-1. Open your FileMaker file
-2. Go to **File → Save a Copy as → XML**
-3. Save the `.xml` file anywhere convenient
+#### Method 1 — Via menu (interactive)
 
-**FileMaker 2026+:**
+**FileMaker 2025:**
 1. Open your FileMaker file
-2. Go to **File → Export → Catalog Export**
-3. Save to a convenient location
+2. Go to **Tools → Save a Copy as XML…**
+3. Choose a destination folder and filename
+4. Optionally check **Include details for analysis tools** to embed the DDR_INFO block (larger file, useful for deeper analysis)
+5. Click **Save** — outputs a single `.xml` file covering the entire solution
+
+**FileMaker 2026:**
+1. Open the file(s) you want to export
+2. Go to **Tools → Save a Copy as XML…**
+3. A dialog shows a checklist of the ~20 available catalogs (Scripts, Layouts, Base Tables, Custom Functions, etc.) — check only what you need
+4. Optionally split binary layout data into a separate catalog file
+5. Optionally export multiple open files in a single operation
+6. Click **Save** — outputs one or more targeted `.xml` files
+
+#### Method 2 — Via script step (automated, both versions)
+
+```
+Save a Copy as XML [ Window Name: "YourFileName" ; Destination File: "/path/to/output.xml" ]
+```
+
+- **FileMaker 2025** — supports `Window Name`, `Destination File`, and `Include details for analysis tools`
+- **FileMaker 2026** — same base parameters, extended with additional options for catalog selection and splitting, enabling fully scripted targeted exports
 
 Then ask your AI tool to process it:
 ```
