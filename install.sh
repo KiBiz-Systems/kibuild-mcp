@@ -76,15 +76,18 @@ echo "✓ kibuild-mcp installed  ($(${INSTALL_DIR}/kibuild-mcp --version 2>/dev/
 
 # ── Step 2: Claude Code slash command ───────────────────────────────────────
 
-COMMAND_URL="https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/.claude/commands/setup-kibuild.md"
 COMMAND_DIR="${HOME}/.claude/commands"
-COMMAND_FILE="${COMMAND_DIR}/setup-kibuild.md"
-
 mkdir -p "$COMMAND_DIR" 2>/dev/null || true
+
+SETUP_URL="https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/.claude/commands/setup-kibuild.md"
+INIT_URL="https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/.claude/commands/init-kibuild-project.md"
+
 if command -v curl >/dev/null 2>&1; then
-  curl -fsSL "$COMMAND_URL" -o "$COMMAND_FILE" 2>/dev/null && echo "✓ /setup-kibuild command installed" || true
+  curl -fsSL "$SETUP_URL" -o "${COMMAND_DIR}/setup-kibuild.md" 2>/dev/null && echo "✓ /setup-kibuild command installed" || true
+  curl -fsSL "$INIT_URL"  -o "${COMMAND_DIR}/init-kibuild-project.md" 2>/dev/null && echo "✓ /init-kibuild-project command installed" || true
 elif command -v wget >/dev/null 2>&1; then
-  wget -qO "$COMMAND_FILE" "$COMMAND_URL" 2>/dev/null && echo "✓ /setup-kibuild command installed" || true
+  wget -qO "${COMMAND_DIR}/setup-kibuild.md"         "$SETUP_URL" 2>/dev/null && echo "✓ /setup-kibuild command installed" || true
+  wget -qO "${COMMAND_DIR}/init-kibuild-project.md"  "$INIT_URL"  2>/dev/null && echo "✓ /init-kibuild-project command installed" || true
 fi
 
 # ── Step 3: Hand off to the native interactive setup ────────────────────────

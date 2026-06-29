@@ -30,18 +30,26 @@ Write-Host "✓ kibuild-mcp installed  ($installedVersion)"
 
 # ── Step 2: Claude Code slash command ───────────────────────────────────────
 
-$commandUrl = "https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/.claude/commands/setup-kibuild.md"
 $commandDir = "$env:USERPROFILE\.claude\commands"
-$commandFile = "$commandDir\setup-kibuild.md"
+if (-not (Test-Path $commandDir)) {
+    New-Item -ItemType Directory -Force -Path $commandDir | Out-Null
+}
+
+$setupUrl = "https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/.claude/commands/setup-kibuild.md"
+$initUrl  = "https://raw.githubusercontent.com/priyabratasahoo21/kibuild-mcp/main/.claude/commands/init-kibuild-project.md"
 
 try {
-    if (-not (Test-Path $commandDir)) {
-        New-Item -ItemType Directory -Force -Path $commandDir | Out-Null
-    }
-    Invoke-RestMethod -Uri $commandUrl -OutFile $commandFile
+    Invoke-RestMethod -Uri $setupUrl -OutFile "$commandDir\setup-kibuild.md"
     Write-Host "✓ /setup-kibuild command installed"
 } catch {
-    Write-Host "  (Could not download command file — skipping)"
+    Write-Host "  (Could not download setup-kibuild.md — skipping)"
+}
+
+try {
+    Invoke-RestMethod -Uri $initUrl -OutFile "$commandDir\init-kibuild-project.md"
+    Write-Host "✓ /init-kibuild-project command installed"
+} catch {
+    Write-Host "  (Could not download init-kibuild-project.md — skipping)"
 }
 
 # ── Step 3: Hand off to the native interactive setup ────────────────────────
